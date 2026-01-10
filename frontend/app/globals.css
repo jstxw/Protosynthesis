@@ -1,3 +1,15 @@
+:root {
+  --background-color: #1e1e1e;
+  --surface-color: #252526;
+  --node-bg-color: #2d2d30;
+  --border-color: #3f3f46;
+  --text-color: #cccccc;
+  --text-muted-color: #8c8c8c;
+  --primary-color: #0e639c;
+  --handle-color: #555;
+  --danger-color: #f44747;
+}
+
 /* Basic Reset & App Layout */
 html, body, #__next {
   padding: 0;
@@ -6,6 +18,8 @@ html, body, #__next {
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
   height: 100%;
   overflow: hidden;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 a {
@@ -29,17 +43,17 @@ a {
 
 /* Control Panel */
 .control-panel {
-  width: 280px;
+  width: 320px;
   flex-shrink: 0;
-  padding: 15px;
-  border-right: 1px solid #eee;
-  background: #fcfcfc;
+  padding: 20px;
+  border-right: 1px solid var(--border-color);
+  background: var(--surface-color);
   overflow-y: auto;
 }
 
 .control-panel h3 {
   margin-top: 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
 }
 
@@ -56,14 +70,15 @@ a {
   width: 100%;
   padding: 8px;
   margin-bottom: 5px;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid var(--border-color);
+  background: var(--node-bg-color);
   border-radius: 4px;
   cursor: pointer;
+  color: var(--text-color);
 }
 
 .control-panel button:hover {
-  background: #f0f0f0;
+  background: #3e3e42;
 }
 
 .execute-button {
@@ -74,8 +89,8 @@ a {
 
 .results-box {
   margin-top: 15px;
-  background: #f3f3f3;
-  border: 1px solid #ddd;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 10px;
 }
@@ -90,8 +105,8 @@ a {
 
 /* Custom Node Styles from your CustomNode.js */
 .react-flow__node-custom {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--node-bg-color);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   padding: 0;
   font-size: 12px;
@@ -99,9 +114,9 @@ a {
 }
 
 .node-header {
-  background: #f0f0f0;
+  background: var(--surface-color);
   padding: 8px 10px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -112,10 +127,11 @@ a {
   background: transparent;
   font-weight: bold;
   width: 70%;
+  color: var(--text-color);
 }
 
 .node-type {
-  color: #888;
+  color: var(--text-muted-color);
   font-size: 10px;
 }
 
@@ -125,17 +141,38 @@ a {
 .port-title { font-weight: bold; margin-bottom: 5px; color: #555; }
 .port { position: relative; padding: 5px 10px; display: flex; align-items: center; justify-content: space-between; }
 .port-label { display: flex; flex-direction: column; }
-.port-type { font-size: 10px; color: #aaa; }
-.port input { width: 100px; font-size: 11px; padding: 2px; }
+.port-type { font-size: 10px; color: var(--text-muted-color); }
+.port input { width: 100px; font-size: 11px; padding: 2px; background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 2px;}
 .node-config { margin-top: 10px; }
 .node-config label { display: block; margin-bottom: 5px; font-weight: bold; }
-.node-config textarea { width: 100%; border: 1px solid #ccc; border-radius: 3px; }
+.node-config textarea { width: 100%; border: 1px solid var(--border-color); border-radius: 3px; background: var(--background-color); color: var(--text-color); }
+
+/* Larger, more accessible handle hitbox */
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--node-bg-color);
+  background-color: var(--handle-color);
+}
+.react-flow__handle:hover {
+  background-color: var(--primary-color);
+}
+.react-flow__handle::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  background: transparent;
+  border-radius: 50%;
+}
 
 /* Context Menu */
 .context-menu {
   position: absolute;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border-radius: 6px;
   min-width: 150px;
@@ -150,13 +187,71 @@ a {
 }
 
 .context-menu-item:hover {
-  background-color: #f0f0f0;
+  background-color: var(--primary-color);
+  color: white;
 }
 
 .context-menu-item.danger {
-  color: #d9534f;
+  color: var(--danger-color);
 }
 
 .context-menu-item.danger:hover {
-  background-color: #f2dede;
+  background-color: var(--danger-color);
+  color: white;
+}
+
+/* New Block List Styles */
+.block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.block-list-item {
+  padding: 10px;
+  background: var(--node-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.block-list-item:hover {
+  background: #3e3e42;
+  border-color: var(--primary-color);
+}
+.block-list-item-icon {
+  filter: invert(80%);
+}
+.block-list-item-content {
+  display: flex;
+  flex-direction: column;
+}
+.block-list-item-name {
+  font-weight: bold;
+}
+.block-list-item-desc {
+  font-size: 12px;
+  color: var(--text-muted-color);
+  margin-top: 4px;
+}
+
+/* Search Input Styles */
+.search-input {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.api-list {
+  max-height: 250px; /* Or any height you prefer */
+  overflow-y: auto;
+  padding-right: 5px; /* For scrollbar spacing */
 }

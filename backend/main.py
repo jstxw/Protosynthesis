@@ -407,10 +407,35 @@ def load_project():
 # --- Demo Setup ---
 def setup_demo_project():
     """
-    Sets up a sample project.
+    Sets up a sample project demonstrating a clear API flow.
     """
     proj = Project("API Demo Project")
 
+    # A StartBlock to explicitly begin the execution flow.
+    start_block = StartBlock()
+    start_block.x = 50
+    start_block.y = 200
+
+    # An API block to get a cat fact. It needs to be triggered.
+    api_block = APIBlock("Get Cat Fact", schema_key="cat_fact")
+    api_block.x = 250
+    api_block.y = 150
+
+    # A final block to display the result.
+    react_display_block = ReactBlock("Result Display")
+    react_display_block.x = 550
+    react_display_block.y = 200
+
+    proj.add_block(start_block)
+    proj.add_block(api_block)
+    proj.add_block(react_display_block)
+
+    # Connect the control/data flow:
+    # 1. Start block triggers the API block.
+    start_block.connect("start_signal", api_block, "trigger")
+    # 2. API block provides the 'fact' output to the Display block.
+    api_block.connect("fact", react_display_block, "display_data")
+    
     return proj
 
 if __name__ == '__main__':
