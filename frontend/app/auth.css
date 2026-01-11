@@ -1,0 +1,417 @@
+/* ===== AUTH PAGE LAYOUT ===== */
+.auth-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--background-color);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Grid background like FlowCanvas */
+.auth-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+    background-size: 25px 25px, 25px 25px, 100px 100px, 100px 100px;
+    pointer-events: none;
+}
+
+/* Container for the two nodes */
+.auth-nodes-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 40px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Animated connecting line between nodes */
+.auth-connector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 60px;
+    pointer-events: none;
+}
+
+.auth-connector-line {
+    stroke: #ffffff;
+    stroke-width: 4;
+    stroke-dasharray: 10 8;
+    animation: dashDraw 0.5s linear infinite;
+}
+
+@keyframes dashDraw {
+    to {
+        stroke-dashoffset: -36;
+    }
+}
+
+/* ===== AUTH NODE (Main Container) ===== */
+.auth-node {
+    background: var(--node-bg-color);
+    border-radius: 10px 10px 0 0;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 8px 8px 30px rgba(0, 0, 0, 0.2);
+    position: relative;
+    color: var(--node-text-color);
+    margin-top: 30px;
+    overflow: visible;
+}
+
+.auth-node.main-auth-node {
+    min-width: 500px;
+}
+
+.auth-node.user-info-node {
+    min-width: 280px;
+}
+
+/* ===== NODE ICON NUB ===== */
+.auth-node .node-icon-nub {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.auth-node .node-nub-icon {
+    opacity: 0.5;
+}
+
+/* ===== NODE HEADER ===== */
+.auth-node .node-header {
+    padding: 0 10px;
+    height: 36px;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 9px 9px 0 0;
+}
+
+.auth-node .node-header h1 {
+    font-weight: bold;
+    font-size: 12px;
+    color: inherit;
+    margin: 0;
+}
+
+.auth-node .node-type {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 10px;
+}
+
+/* Header colors */
+.node-header-signup {
+    background-color: var(--color-green);
+    color: var(--node-text-color);
+}
+
+.node-header-login {
+    background-color: var(--color-blue);
+    color: var(--node-text-color);
+}
+
+.node-header-userinfo {
+    background-color: var(--color-orange);
+    color: var(--node-text-color);
+}
+
+/* ===== AUTH BODY (Form Area) ===== */
+.auth-body {
+    padding: 10px;
+}
+
+/* ===== AUTH PORT (Input Row) ===== */
+.auth-port {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 5px 10px;
+}
+
+.auth-port.input {
+    flex-direction: row;
+}
+
+.auth-port.output {
+    flex-direction: row-reverse;
+}
+
+/* Handle circles on the side */
+.auth-port-handle {
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--input-border-color);
+    background-color: var(--background-color);
+    border-radius: 50%;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.auth-port-handle.connected {
+    background-color: #ffffff;
+    box-shadow: none;
+}
+
+.auth-port.input .auth-port-handle {
+    margin-right: 8px;
+    margin-left: -16px;
+}
+
+.auth-port.output .auth-port-handle {
+    margin-left: 8px;
+    margin-right: -16px;
+}
+
+/* Port content wrapper */
+.auth-port-content {
+    flex: 1;
+}
+
+.auth-port-label {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-port-label > span:first-child {
+    font-size: 12px;
+}
+
+.auth-port-label .port-type {
+    font-size: 10px;
+    color: var(--text-muted-color);
+    filter: brightness(0.8);
+}
+
+.auth-port-content label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 12px;
+    color: var(--node-text-color);
+}
+
+.auth-port-content input {
+    width: 100%;
+    padding: 10px 12px;
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+    color: var(--node-text-color);
+    font-size: 13px;
+}
+
+.auth-port-content input:focus {
+    outline: none;
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 2px rgba(159, 168, 218, 0.3);
+}
+
+.auth-port-content input::placeholder {
+    color: var(--text-muted-color);
+}
+
+/* Password input wrapper */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    padding-right: 40px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted-color);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-toggle:hover {
+    color: var(--node-text-color);
+}
+
+/* ===== AUTH BUTTON ===== */
+.auth-button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--color-green);
+    color: var(--node-text-color);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.auth-button:hover {
+    background-color: var(--button-hover-green);
+}
+
+.auth-button:disabled {
+    background-color: var(--item-bg-color);
+    cursor: not-allowed;
+    color: var(--text-muted-color);
+}
+
+/* ===== AUTH FOOTER ===== */
+.auth-footer {
+    padding: 10px;
+    border-top: 1px solid var(--input-border-color);
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted-color);
+    font-size: 11px;
+    margin: 8px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--input-border-color);
+}
+
+.auth-divider:not(:empty)::before {
+    margin-right: 0.5em;
+}
+
+.auth-divider:not(:empty)::after {
+    margin-left: 0.5em;
+}
+
+/* ===== SOCIAL BUTTONS ===== */
+.social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.social-button {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg-color);
+    color: var(--node-text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: bold;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.social-button:hover {
+    background-color: var(--hover-color);
+    border-color: var(--border-color);
+}
+
+.social-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ===== AUTH LINK ===== */
+.auth-link {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted-color);
+}
+
+.auth-link a {
+    color: var(--color-blue);
+    font-weight: bold;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* ===== AUTH ERROR ===== */
+.auth-error {
+    background-color: rgba(244, 143, 177, 0.15);
+    color: var(--color-red);
+    border: 1px solid var(--color-red);
+    padding: 10px;
+    border-radius: 4px;
+    margin: 15px 20px 0;
+    text-align: center;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* ===== HOVER OUTLINE (Like CustomNode) ===== */
+.auth-node::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border: 3px solid transparent;
+    border-radius: 14px 14px 4px 4px;
+    pointer-events: none;
+    transition: border-color 0.2s ease;
+}
+
+.auth-node:hover::before {
+    border-color: var(--primary-color);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .auth-nodes-container {
+        flex-direction: column;
+        gap: 60px;
+    }
+
+    .auth-connector {
+        transform: translate(-50%, -50%) rotate(90deg);
+    }
+}
+

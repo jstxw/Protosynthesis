@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>React Sandbox</title>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; font-family: sans-serif; background-color: transparent; }
+        #root { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/javascript">
+        // --- Communication Layer ---
+        const parentOrigin = '*'; // In production, set this to your app's origin for security
+
+        const callbacks = {
+            onWorkflowOutputChange: (key, value) => {
+                window.parent.postMessage({
+                    type: 'SET_WORKFLOW_OUTPUT',
+                    payload: { key, value }
+                }, parentOrigin);
+            },
+            triggerWorkflow: () => {
+                window.parent.postMessage({ type: 'TRIGGER_WORKFLOW_EXECUTION' }, parentOrigin);
+            }
+        };
+
+        // --- Core Sandbox Logic ---
+        function injectCSS(cssCode) {
+            let styleTag = document.getElementById('user-styles');
+            if (!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = 'user-styles';
+                document.head.appendChild(styleTag);
+            }
+            styleTag.textContent = cssCode;
+        }
+
+        function transpileJSX(jsxCode) {
+            try {
+                const transpiled = Babel.transform(jsxCode, {
+                    presets: ['react', 'env'],
+                    filename: 'UserComponent.jsx'
+                }).code;
+                return transpiled;
+            } catch (error) {
+                console.error("Babel Transpilation Error:", error);
+                // Return code for a component that displays the error
+                return `const MyErrorComponent = () => React.createElement('pre', { style: { color: 'red', whiteSpace: 'pre-wrap', padding: '10px' } }, '${error.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}');\nexport default MyErrorComponent;`;
+            }
+        }
+
+        function renderUserComponent(jsxCode, cssCode, props) {
+            injectCSS(cssCode);
+            const transpiledCode = transpileJSX(jsxCode);
+
+            const exports = {};
+            const module = { exports };
+            
+            try {
+                new Function('React', 'module', 'exports', transpiledCode)(React, module, exports);
+            } catch (error) {
+                 console.error("Runtime Error in User Code:", error);
+                 const ErrorComponent = () => React.createElement('pre', { style: { color: 'red', whiteSpace: 'pre-wrap', padding: '10px' } }, `Runtime Error:\n${error.message}`);
+                 ReactDOM.render(React.createElement(ErrorComponent), document.getElementById('root'));
+                 return;
+            }
+
+            const UserComponent = module.exports.default || module.exports;
+
+            if (typeof UserComponent !== 'function' && typeof UserComponent !== 'object') {
+                 const ErrorComponent = () => React.createElement('pre', { style: { color: 'red', padding: '10px' } }, 'Error: Component did not export a default React component.');
+                 ReactDOM.render(React.createElement(ErrorComponent), document.getElementById('root'));
+                 return;
+            }
+
+            const allProps = { ...props, ...callbacks };
+
+            ReactDOM.render(
+                React.createElement(UserComponent, allProps),
+                document.getElementById('root')
+            );
+        }
+
+        // --- Event Listener ---
+        window.addEventListener('message', (event) => {
+            const { type, payload } = event.data;
+            if (type === 'RENDER_COMPONENT') {
+                renderUserComponent(payload.jsx, payload.css, payload.props);
+            }
+        });
+
+        // Signal to parent that the sandbox is ready
+        window.parent.postMessage({ type: 'SANDBOX_READY' }, parentOrigin);
+    </script>
+</body>
+</html>

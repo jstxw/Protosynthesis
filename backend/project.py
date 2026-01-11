@@ -66,6 +66,9 @@ class Project:
                 block_data["url"] = block.url
                 block_data["method"] = block.method
                 block_data["schema_key"] = block.schema_key
+            elif isinstance(block, ReactBlock):
+                block_data["jsx_code"] = block.jsx_code
+                block_data["css_code"] = block.css_code
             elif isinstance(block, LogicBlock):
                 block_data["operation"] = block.operation
             elif isinstance(block, TransformBlock):
@@ -121,7 +124,12 @@ class Project:
             elif b_type == "LOGIC":
                 block = LogicBlock(name, block_data.get("operation", "add"), x=x, y=y)
             elif b_type == "REACT":
-                block = ReactBlock(name, x=x, y=y)
+                block = ReactBlock(
+                    name, 
+                    jsx_code=block_data.get("jsx_code", ""), 
+                    css_code=block_data.get("css_code", ""), 
+                    x=x, y=y
+                )
             elif b_type == "TRANSFORM":
                 block = TransformBlock(name, block_data.get("transformation_type", "to_string"), fields=block_data.get("fields", ""), x=x, y=y)
             elif b_type == "STRING_BUILDER":

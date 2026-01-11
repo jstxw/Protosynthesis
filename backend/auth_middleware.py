@@ -1,26 +1,33 @@
 from functools import wraps
-from flask import request, jsonify
+from flask import request, jsonify, g
 import jwt
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from jwt import PyJWK
 import os
 import requests
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 
 SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Debug: Print configuration
 if SUPABASE_JWT_SECRET:
     secret_preview = SUPABASE_JWT_SECRET[:10] + "..." + SUPABASE_JWT_SECRET[-10:] if len(SUPABASE_JWT_SECRET) > 20 else "***"
-    print(f"🔑 JWT Secret loaded: {secret_preview} (length: {len(SUPABASE_JWT_SECRET)})")
+    logger.info(f"🔑 JWT Secret loaded: {secret_preview} (length: {len(SUPABASE_JWT_SECRET)})")
 else:
-    print("❌ JWT Secret NOT loaded!")
+    logger.warning("❌ Supabase JWT Secret (HS256) is NOT configured!")
 
 if SUPABASE_URL:
-    print(f"🔗 Supabase URL: {SUPABASE_URL}")
+    logger.info(f"🔗 Supabase URL: {SUPABASE_URL}")
 else:
-    print("❌ Supabase URL NOT loaded!")
+    logger.warning("❌ Supabase URL is NOT configured!")
 
 # Cache for JWKS
 _jwks_cache = None
@@ -34,18 +41,34 @@ def get_supabase_jwks():
 
     try:
         jwks_url = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
-        print(f"🔍 Fetching JWKS from: {jwks_url}")
+        logger.info(f"🔍 Fetching JWKS from: {jwks_url}")
 
         response = requests.get(jwks_url, timeout=10)
         response.raise_for_status()
         jwks = response.json()
 
-        print(f"✅ JWKS fetched: {len(jwks.get('keys', []))} keys found")
+        logger.info(f"✅ JWKS fetched: {len(jwks.get('keys', []))} keys found")
         _jwks_cache = jwks
         return jwks
     except Exception as e:
-        print(f"❌ Failed to fetch JWKS: {e}")
+        logger.error(f"❌ Failed to fetch JWKS: {e}")
         return None
+
+def _find_matching_key_in_jwks(kid: str, jwks: dict):
+    """Finds a matching key in the JWKS based on the key ID (kid)."""
+    if not jwks or 'keys' not in jwks:
+        return None
+
+    for key in jwks['keys']:
+        if kid and key.get('kid') == kid:
+            return key
+
+    # Fallback for tokens that might not have a 'kid' in the header
+    if not kid and jwks['keys']:
+        logger.warning("⚠️ Token header has no 'kid', using the first available key from JWKS.")
+        return jwks['keys'][0]
+
+    return None
 
 def verify_token(token: str) -> dict:
     """
@@ -61,49 +84,29 @@ def verify_token(token: str) -> dict:
         ValueError: If token is invalid or expired
     """
     try:
-        print(f"🔍 Attempting to verify token...")
-        print(f"🔍 Token preview: {token[:20]}...{token[-20:]}")
-        print(f"🔍 Token length: {len(token)}")
+        logger.info("🔍 Attempting to verify token...")
 
         # Decode header to check algorithm
         header = jwt.get_unverified_header(token)
         algorithm = header.get('alg')
         kid = header.get('kid')
 
-        print(f"🔍 Token algorithm: {algorithm}")
-        print(f"🔍 Token kid (key ID): {kid}")
-
-        # Decode without verification to see payload
-        unverified = jwt.decode(token, options={"verify_signature": False})
-        print(f"🔍 Token issuer: {unverified.get('iss')}")
-        print(f"🔍 Token audience: {unverified.get('aud')}")
+        logger.info(f"🔍 Token algorithm: {algorithm}, Key ID: {kid}")
 
         # For ES256, we need the public key from JWKS
         if algorithm == 'ES256':
-            print(f"🔍 ES256 detected - fetching public key from JWKS...")
+            logger.info("🔍 ES256 detected - fetching public key from JWKS...")
             jwks = get_supabase_jwks()
-
             if not jwks:
                 raise ValueError("Could not fetch JWKS from Supabase")
 
-            # Find the matching key
-            matching_key = None
-            for key in jwks.get('keys', []):
-                if kid and key.get('kid') == kid:
-                    matching_key = key
-                    break
-                elif not kid:
-                    # Use first key if no kid specified
-                    matching_key = key
-                    break
-
+            matching_key = _find_matching_key_in_jwks(kid, jwks)
             if not matching_key:
                 raise ValueError(f"No matching key found for kid: {kid}")
 
-            print(f"✅ Found matching public key")
+            logger.info("✅ Found matching public key in JWKS")
 
             # Convert JWK to PEM format for PyJWT
-            from jwt import PyJWK
             public_key = PyJWK(matching_key).key
 
             # Verify with public key
@@ -115,14 +118,14 @@ def verify_token(token: str) -> dict:
                 options={"verify_aud": True}
             )
 
-            print(f"✅ Token verified successfully with ES256!")
-            print(f"✅ User ID: {payload.get('sub')}")
-            print(f"✅ Email: {payload.get('email')}")
+            logger.info(f"✅ Token verified successfully with ES256 for user: {payload.get('sub')}")
             return payload
 
         # For HS256, use the JWT secret
         elif algorithm in ['HS256', 'HS384', 'HS512']:
-            print(f"🔍 {algorithm} detected - using JWT secret...")
+            logger.info(f"🔍 {algorithm} detected - using JWT secret...")
+            if not SUPABASE_JWT_SECRET:
+                raise ValueError("HS256 signing secret is not configured on the server.")
 
             payload = jwt.decode(
                 token,
@@ -132,24 +135,20 @@ def verify_token(token: str) -> dict:
                 options={"verify_aud": True}
             )
 
-            print(f"✅ Token verified successfully with {algorithm}!")
-            print(f"✅ User ID: {payload.get('sub')}")
-            print(f"✅ Email: {payload.get('email')}")
+            logger.info(f"✅ Token verified successfully with {algorithm} for user: {payload.get('sub')}")
             return payload
 
         else:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
 
-    except jwt.ExpiredSignatureError as e:
-        print(f"❌ Token expired: {e}")
+    except ExpiredSignatureError as e:
+        logger.warning(f"❌ Token expired: {e}")
         raise ValueError("Token has expired")
-    except ValueError:
-        raise
+    except InvalidTokenError as e:
+        logger.error(f"❌ Invalid token error: {e}")
+        raise ValueError(f"Invalid token: {e}")
     except Exception as e:
-        print(f"❌ Token verification error: {type(e).__name__}")
-        print(f"❌ Error details: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"❌ Unexpected token verification error: {type(e).__name__}: {e}", exc_info=True)
         raise ValueError(f"Invalid token: {str(e)}")
 
 def require_auth(f):
@@ -165,58 +164,71 @@ def require_auth(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        print(f"\n{'='*60}")
-        print(f"🔐 AUTH MIDDLEWARE - Route: {request.path}")
-        print(f"{'='*60}")
+        logger.info(f"{'='*60}")
+        logger.info(f"🔐 AUTH MIDDLEWARE - Route: {request.path}")
+        logger.info(f"{'='*60}")
 
         # Get token from Authorization header
         auth_header = request.headers.get('Authorization')
 
         if not auth_header:
-            print("❌ No Authorization header found")
+            logger.warning("❌ No Authorization header found")
             return jsonify({"error": "No authorization header"}), 401
 
-        print(f"✅ Authorization header present")
+        logger.info("✅ Authorization header present")
 
         try:
             # Extract token (format: "Bearer <token>")
             parts = auth_header.split()
 
             if len(parts) != 2 or parts[0].lower() != 'bearer':
-                print(f"❌ Invalid header format")
+                logger.warning("❌ Invalid header format")
                 return jsonify({"error": "Invalid authorization header format"}), 401
 
             token = parts[1]
-            print(f"✅ Token extracted from header")
+            logger.info("✅ Token extracted from header")
 
             # Verify the token
             current_user = verify_token(token)
 
-            print(f"✅ Authentication successful for user: {current_user.get('sub')}")
-            print(f"{'='*60}\n")
+            # Store user in Flask's application context for this request
+            g.user = current_user
+
+            logger.info(f"✅ Authentication successful for user: {current_user.get('sub')}")
+            logger.info(f"{'='*60}\n")
 
             # Pass the decoded user info to the route handler
             return f(current_user, *args, **kwargs)
 
         except ValueError as e:
-            print(f"❌ ValueError during auth: {e}")
-            print(f"{'='*60}\n")
+            logger.error(f"❌ Authentication failed (ValueError): {e}")
+            logger.info(f"{'='*60}\n")
             return jsonify({"error": str(e)}), 401
         except Exception as e:
-            print(f"❌ Unexpected error during auth: {type(e).__name__}: {e}")
-            print(f"{'='*60}\n")
+            logger.error(f"❌ Unexpected error during auth: {type(e).__name__}: {e}", exc_info=True)
+            logger.info(f"{'='*60}\n")
             return jsonify({"error": "Authentication failed"}), 401
 
     return decorated_function
 
 def get_user_id_from_token() -> str:
     """
-    Extract user ID from the current request's JWT token.
+    Extract user ID from the current request's context.
+    This should be used in a route protected by @require_auth.
     """
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        raise ValueError("No authorization header")
+    if 'user' in g:
+        return g.user.get('sub')
+    # This fallback is expensive and should ideally not be hit.
+    # It's here for cases where the function might be called outside the decorator's direct flow.
+    logger.warning("⚠️ get_user_id_from_token() called without 'g.user', re-verifying token.")
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            raise ValueError("No authorization header")
 
-    token = auth_header.split()[1]
-    payload = verify_token(token)
-    return payload['sub']
+        token = auth_header.split()[1]
+        payload = verify_token(token)
+        return payload['sub']
+    except (ValueError, IndexError) as e:
+        logger.error(f"Could not get user ID from token: {e}")
+        return None

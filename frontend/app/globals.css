@@ -1,6 +1,6 @@
 :root {
     --background-color: #3f464e; /* Poorly wiped chalkboard grey */
-    --surface-color: #BCAAA4; /* Beige wood color */
+    --surface-color: #4E342E; /* Dark wood color */
     --node-bg-color: #fffdf5; /* Paper note color */
     --node-text-color: #212121;
     --border-color: #d7ccc8; /* Light wood/chalk border */
@@ -8,8 +8,8 @@
     --text-muted-color: #bcaaa4;
     --primary-color: #ffffff;
     --handle-color: #1a1a1a;
-    --hover-color: #EFEBE9; /* Darker beige for hover effect */
-    --item-bg-color: #D7CCC8; /* Background for items on beige panels */
+    --hover-color: #BCAAA4; /* Lighter beige for hover effect */
+    --item-bg-color: #D7CCC8; /* Lighter background for items on panels */
     --danger-color: #ef5350;
     --color-green: #c5e1a5;
     --color-red: #f48fb1;
@@ -19,8 +19,9 @@
     --button-hover-green: #aed581;
     --input-bg-color: #f5f5f5; /* Inputs on paper nodes */
     --input-border-color: #e0e0e0;
-    --panel-text-color: #212121;
-    --panel-text-muted-color: #5f5f5f;
+    --panel-text-color: #EFEBE9; /* Light text for dark panel */
+    --panel-text-muted-color: #BCAAA4; /* Muted light text for dark panel */
+    --item-text-muted-color: #5f5f5f; /* Muted dark text for light items */
 }
 
 /* Basic Reset & App Layout */
@@ -103,7 +104,7 @@ input, textarea, select, button {
     background: var(--node-bg-color);
     border-radius: 4px;
     cursor: pointer;
-    color: var(--text-color);
+    color: var(--panel-text-color);
 }
 
 .control-panel button:hover {
@@ -200,6 +201,11 @@ input, textarea, select, button {
 
 .node-header-dialogue {
     background-color: var(--color-purple);
+    color: var(--node-text-color);
+}
+
+.node-header-auth {
+    background-color: var(--color-blue);
     color: var(--node-text-color);
 }
 
@@ -515,6 +521,26 @@ input, textarea, select, button {
     overflow-y: auto;
 }
 
+/* React IDE in Node Settings */
+.react-ide-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.editor-pane, .preview-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.editor-pane .monaco-editor,
+.editor-pane .monaco-editor .monaco-editor-background,
+.editor-pane .monaco-editor .margin {
+    background-color: #1e1e1e !important; /* Match VS Code dark theme */
+}
+
 /* Custom Scrollbar for Node Menu */
 .node-menu::-webkit-scrollbar {
     width: 6px;
@@ -588,4 +614,32 @@ input, textarea, select, button {
     border-radius: 14px 14px 4px 4px; /* Matches node radius + offset */
     pointer-events: none;
     z-index: -1;
+}
+
+/* UI Node (Generic Node Card) */
+.ui-node {
+    background: var(--node-bg-color);
+    border-radius: 10px 10px 0 0;
+    box-shadow: 8px 8px 30px rgba(0, 0, 0, 0.2);
+    position: relative;
+    color: var(--node-text-color);
+    margin-top: 30px;
+    width: 100%;
+}
+
+.ui-node::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border: 3px solid transparent;
+    border-radius: 14px 14px 4px 4px;
+    pointer-events: none;
+    transition: border-color 0.2s ease;
+}
+
+.ui-node:hover::before {
+    border-color: var(--primary-color);
 }
