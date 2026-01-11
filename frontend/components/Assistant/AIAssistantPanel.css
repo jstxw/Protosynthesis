@@ -1,63 +1,25 @@
-boar.ai-assistant-panel {
+.ai-assistant-panel {
   position: fixed;
-  right: 20px;
-  top: 20px;
-  height: 600px;
-  max-height: calc(100vh - 40px);
+  right: 0;
+  top: 0;
+  width: 380px;
+  height: 100vh;
   background: var(--surface-color, #D7CCC8);
-  border: 1px solid var(--border-color, #a1887f);
+  border-left: 1px solid var(--border-color, #a1887f);
   display: flex;
   flex-direction: column;
   z-index: 1000;
-  transition: all 0.3s ease;
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
   color: var(--panel-text-color, #000000);
-}
-
-.ai-assistant-panel.expanded {
-  width: 380px;
-}
-
-.ai-assistant-panel.collapsed {
-  width: 60px;
-  height: 60px; /* Collapse to a small square/button */
-  border-radius: 30px; /* Make it circular when collapsed */
-  overflow: hidden;
-}
-
-.ai-assistant-panel.collapsed .quick-actions,
-.ai-assistant-panel.collapsed .messages-container,
-.ai-assistant-panel.collapsed .input-container,
-.ai-assistant-panel.collapsed .powered-by,
-.ai-assistant-panel.collapsed .assistant-header h3,
-.ai-assistant-panel.collapsed .assistant-header .toggle-btn {
-  display: none;
-}
-
-.ai-assistant-panel.collapsed .assistant-header {
-  border-bottom: none;
-  background: transparent;
-  padding: 0;
-  justify-content: center;
-  height: 100%;
-}
-
-.ai-assistant-panel.collapsed .header-left {
-  gap: 0;
-  justify-content: center;
-  width: 100%;
-  cursor: pointer;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .assistant-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 16px;
   border-bottom: 1px solid var(--border-color, #a1887f);
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px 10px 0 0;
 }
 
 .header-left {
@@ -75,26 +37,6 @@ boar.ai-assistant-panel {
   font-size: 16px;
   font-weight: 600;
   color: var(--panel-text-color, #000000);
-}
-
-.toggle-btn {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--panel-text-muted-color);
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.toggle-btn:hover {
-  background: var(--hover-color);
-  color: var(--panel-text-color);
 }
 
 .quick-actions {
@@ -210,11 +152,11 @@ boar.ai-assistant-panel {
 }
 
 .message.user .message-avatar {
-  background: var(--color-blue);
+  background: var(--item-bg-color);
 }
 
 .message.assistant .message-avatar {
-  background: var(--color-green);
+  background: var(--item-bg-color);
 }
 
 .message-content {
@@ -235,8 +177,9 @@ boar.ai-assistant-panel {
 }
 
 .message.user .message-text {
-  background: var(--color-blue);
+  background: var(--hover-color);
   color: var(--node-text-color);
+  border: 1px solid var(--border-color);
 }
 
 .message-sources {
@@ -303,7 +246,6 @@ boar.ai-assistant-panel {
   display: flex;
   gap: 8px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 0 0 10px 10px;
 }
 
 .input-container textarea {
@@ -355,14 +297,6 @@ boar.ai-assistant-panel {
   transform: translateY(-1px);
 }
 
-.powered-by {
-  font-size: 10px;
-  text-align: center;
-  padding: 4px;
-  color: var(--panel-text-muted-color);
-  opacity: 0.7;
-}
-
 .send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -372,25 +306,7 @@ boar.ai-assistant-panel {
   padding: 8px 12px;
   text-align: center;
   font-size: 11px;
-  color: #666;
-  border-top: 1px solid #333;
-  background: #1a1a1a;
-}
-
-/* Collapsed state - hide everything except header */
-.ai-assistant-panel.collapsed .quick-actions,
-.ai-assistant-panel.collapsed .messages-container,
-.ai-assistant-panel.collapsed .input-container,
-.ai-assistant-panel.collapsed .powered-by {
-  display: none;
-}
-
-.ai-assistant-panel.collapsed .assistant-header h3,
-.ai-assistant-panel.collapsed .assistant-icon {
-  display: none;
-}
-
-.ai-assistant-panel.collapsed .assistant-header {
-  justify-content: center;
-  padding: 12px;
+  color: var(--panel-text-muted-color);
+  border-top: 1px solid var(--border-color);
+  background: var(--item-bg-color);
 }
