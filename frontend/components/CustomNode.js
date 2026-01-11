@@ -1,11 +1,32 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
 import { useStore } from '../helpers/store';
+import Image from 'next/image';
+
+const getIconForType = (type) => {
+  switch (type) {
+    case 'START': return '/play.svg';
+    case 'REACT': return '/user.svg';
+    case 'STRING_BUILDER': return '/text.svg';
+    case 'LOGIC': return '/branch.svg';
+    case 'TRANSFORM': return '/shuffle.svg';
+    case 'WAIT': return '/clock.svg';
+    case 'API': return '/window.svg';
+    case 'GET_KEY': return '/key.svg';
+    case 'DIALOGUE': return '/chat.svg';
+    default: return null;
+  }
+};
 
 const CustomNode = ({ data }) => {
   const { updateNode, updateInputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId } = useStore();
+  const [name, setName] = useState(data.name || '');
 
-  const handleNameChange = (e) => {
+  useEffect(() => {
+    setName(data.name || '');
+  }, [data.name]);
+
+  const handleNameBlur = (e) => {
     updateNode(data.id, { name: e.target.value });
   };
 
@@ -29,9 +50,13 @@ const CustomNode = ({ data }) => {
     updateNode(data.id, { delay: e.target.value });
   };
 
+  const handleMockResponseChange = (e) => {
+    updateInputValue(data.id, 'mock_response', e.target.value);
+  };
+
   // The menu component, rendered conditionally
   const SettingsMenu = () => (
-    <div className="node-menu nodrag">
+ <div className="node-menu nodrag" onWheel={(e) => e.stopPropagation()}>
       {/* API Block Specific Settings */}
       {data.type === 'API' && (
         <div className="menu-section">
@@ -102,17 +127,27 @@ const CustomNode = ({ data }) => {
 
         {/* For unconnected inputs, show a manual input field */}
         {type === 'input' && !isConnected && (
-          <input
-            type="text"
-            className="nodrag" // Prevents node dragging when interacting with the input
-            defaultValue={
-              typeof port.value === 'object' && port.value !== null
-                ? JSON.stringify(port.value)
-                : port.value || ''
-            }
-            onChange={(e) => updateInputValue(data.id, port.key, e.target.value)}
-            placeholder="Manual Input"
-          />
+          port.data_type === 'boolean' ? (
+            <input
+              type="checkbox"
+              className="nodrag"
+              checked={!!port.value}
+              onChange={(e) => updateInputValue(data.id, port.key, e.target.checked)}
+              style={{ width: 'auto', margin: '0 5px' }}
+            />
+          ) : (
+            <input
+              type="text"
+              className="nodrag" // Prevents node dragging when interacting with the input
+              defaultValue={
+                typeof port.value === 'object' && port.value !== null
+                  ? JSON.stringify(port.value)
+                  : port.value || ''
+              }
+              onChange={(e) => updateInputValue(data.id, port.key, e.target.value)}
+              placeholder="Manual Input"
+            />
+          )
         )}
 
         {type === 'output' && <Handle type="source" position={Position.Right} id={port.key} className={isConnected ? 'handle-connected' : ''} />}
@@ -131,19 +166,46 @@ const CustomNode = ({ data }) => {
       case 'LOGIC': return 'node-header-logic';
       case 'TRANSFORM': return 'node-header-transform';
       case 'WAIT': return 'node-header-wait';
+      case 'GET_KEY': return 'node-header-logic'; // Reuse logic color
+      case 'DIALOGUE': return 'node-header-dialogue';
       default: return '';
     }
   };
 
   return (
     <div className={`custom-node ${isActive ? 'active-block' : ''}`}>
+      {getIconForType(data.type) && (
+        <div className={`node-icon-nub ${getHeaderClass()}`}>
+          <Image 
+            src={getIconForType(data.type)} 
+            width={28} 
+            height={28} 
+            alt="" 
+            className="node-nub-icon" 
+          />
+        </div>
+      )}
       <div className={`node-header ${getHeaderClass()}`}>
-        <input 
-          type="text" 
-          defaultValue={data.name} 
-          onBlur={handleNameChange}
-          className="nodrag node-name-input"
-        />
+        <div style={{ display: 'grid', marginRight: 'auto' }}>
+          <span style={{ 
+            gridArea: '1/1', 
+            visibility: 'hidden', 
+            whiteSpace: 'pre', 
+            fontWeight: 'bold', 
+            fontFamily: 'inherit',
+            minWidth: '20px'
+          }}>
+            {name || ' '}
+          </span>
+          <input 
+            type="text" 
+            value={name} 
+            onChange={(e) => setName(e.target.value)}
+            onBlur={handleNameBlur}
+            className="nodrag node-name-input"
+            style={{ gridArea: '1/1', width: '100%', minWidth: '0', padding: 0 }}
+          />
+        </div>
         {data.menu_open ? (
           <button className="delete-button nodrag" onClick={() => removeBlock(data.id)} title="Delete Block">
             &times;
@@ -194,9 +256,8 @@ const CustomNode = ({ data }) => {
               <option value="to_string">To String</option>
               <option value="to_json">To JSON</option>
               <option value="params_to_json">Params to JSON</option>
-              <option value="json_to_params">JSON to Params</option>
             </select>
-            {(data.transformation_type === 'params_to_json' || data.transformation_type === 'json_to_params') && (
+            {data.transformation_type === 'params_to_json' && (
               <>
                 <label>Fields (comma separated)</label>
                 <input 
@@ -243,6 +304,20 @@ const CustomNode = ({ data }) => {
               className="nodrag"
               defaultValue={data.delay}
               onBlur={handleDelayChange}
+              style={{ width: '100%' }}
+            />
+          </div>
+        )}
+
+        {data.type === 'DIALOGUE' && (
+          <div className="node-config">
+            
+            <label style={{marginTop: '10px'}}>Mock Response (for backend)</label>
+            <input
+              type="text"
+              className="nodrag"
+              defaultValue={data.inputs.find(i => i.key === 'mock_response')?.value || ''}
+              onBlur={handleMockResponseChange}
               style={{ width: '100%' }}
             />
           </div>

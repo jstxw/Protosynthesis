@@ -41,10 +41,12 @@ const ControlPanel = () => {
     { type: 'LOGIC', name: 'Logic', description: 'Performs conditional logic.', icon: '/branch.svg' },
     { type: 'TRANSFORM', name: 'Transform', description: 'Modifies data formats.', icon: '/shuffle.svg' },
     { type: 'WAIT', name: 'Wait', description: 'Pauses execution.', icon: '/clock.svg' },
+    { type: 'GET_KEY', name: 'Get Key', description: 'Extracts a value from a JSON object.', icon: '/key.svg' },
+    { type: 'DIALOGUE', name: 'Dialogue', description: 'Input and Output display.', icon: '/chat.svg' },
   ];
 
   const filteredApiSchemas = Object.entries(apiSchemas)
-    .filter(([key, schema]) => 
+    .filter(([key, schema]) =>
       schema.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -71,12 +73,12 @@ const ControlPanel = () => {
 
       <div className="controls-section">
         <h4>Logic Blocks</h4>
-        <div className="logic-grid">
+        <div className="logic-grid" onWheel={(e) => e.stopPropagation()}>
           {logicBlockTypes.map(block => (
-            <div 
-              key={block.type} 
-              className="block-list-item" 
-              onClick={() => addBlock(block.type, { name: block.name })} 
+            <div
+              key={block.type}
+              className="block-list-item"
+              onClick={() => addBlock(block.type, { name: block.name })}
               onDragStart={(event) => onDragStart(event, { type: block.type, params: { name: block.name } })}
               draggable
               title={`Add ${block.name} block`}
@@ -99,12 +101,12 @@ const ControlPanel = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <div className="block-list api-list">
+          <div className="block-list api-list" onWheel={(e) => e.stopPropagation()}>
           {filteredApiSchemas.map(([key, schema]) => (
-            <div 
-              key={key} 
-              className="block-list-item" 
-              onClick={() => addBlock('API', { schema_key: key, name: schema.name })} 
+            <div
+              key={key}
+              className="block-list-item"
+              onClick={() => addBlock('API', { schema_key: key, name: schema.name })}
               onDragStart={(event) => onDragStart(event, { type: 'API', params: { schema_key: key, name: schema.name } })}
               draggable
               title={`Add ${schema.name} block`}
