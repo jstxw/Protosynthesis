@@ -5,6 +5,7 @@ import {
     applyEdgeChanges,
     addEdge,
 } from 'reactflow';
+import { apiClient } from '../services/api';
 
 const API_URL = 'http://localhost:5001/api';
 
@@ -18,6 +19,9 @@ export const useStore = create((set, get) => ({
     executionLogs: [],
     hoveredNodeId: null,
     isExecuting: false,
+    currentProjectId: null,
+    currentWorkflowId: null,
+    autoSaveTimer: null,
 
     // --- DATA FETCHING ---
     fetchApiSchemas: async () => {
@@ -61,6 +65,8 @@ export const useStore = create((set, get) => ({
                 }
             }
         });
+        // Trigger auto-save for v2 workflows
+        get().scheduleAutoSave();
     },
 
     onEdgesChange: (changes) => {
@@ -85,6 +91,8 @@ export const useStore = create((set, get) => ({
         set({
             edges: applyEdgeChanges(changes, get().edges),
         });
+        // Trigger auto-save for v2 workflows
+        get().scheduleAutoSave();
     },
 
     onConnect: async (connection) => {
@@ -114,6 +122,8 @@ export const useStore = create((set, get) => ({
             get().fetchGraph(); // Refresh to restore previous state if needed
             alert("Failed to create connection. The connection has been rolled back.");
         }
+        // Trigger auto-save for v2 workflows
+        get().scheduleAutoSave();
     },
 
     // --- BLOCK & NODE MANAGEMENT ---
@@ -137,6 +147,8 @@ export const useStore = create((set, get) => ({
                 data: {...newNodeData, type: newNodeData.block_type},
             };
             set(state => ({nodes: [...state.nodes, flowNode]}));
+            // Trigger auto-save for v2 workflows
+            get().scheduleAutoSave();
         } catch (error) {
             console.error("Failed to add block:", error);
         }
@@ -160,6 +172,8 @@ export const useStore = create((set, get) => ({
                     return n;
                 })
             }));
+            // Trigger auto-save for v2 workflows
+            get().scheduleAutoSave();
         } catch (error) {
             console.error("Failed to update node:", error);
         }
@@ -183,6 +197,8 @@ export const useStore = create((set, get) => ({
                     return node;
                 })
             }));
+            // Trigger auto-save for v2 workflows
+            get().scheduleAutoSave();
         } catch (error) {
             console.error("Failed to update input value:", error);
         }
@@ -222,6 +238,8 @@ export const useStore = create((set, get) => ({
                 nodes: state.nodes.filter(n => n.id !== nodeId),
                 edges: state.edges.filter(e => e.source !== nodeId && e.target !== nodeId),
             }));
+            // Trigger auto-save for v2 workflows
+            get().scheduleAutoSave();
         } catch (error) {
             console.error("Failed to remove block:", error);
         }
@@ -429,5 +447,91 @@ export const useStore = create((set, get) => ({
             console.error("Failed to load project:", error);
             alert(`Failed to load project: ${error.response?.data?.error || error.message}`);
         }
+    },
+
+    // --- NEW V2 API WORKFLOW MANAGEMENT ---
+    setCurrentWorkflow: (projectId, workflowId) => {
+        set({ currentProjectId: projectId, currentWorkflowId: workflowId });
+    },
+
+    loadWorkflowFromV2: async (projectId, workflowId) => {
+        try {
+            console.log(`Loading workflow ${workflowId} from project ${projectId}`);
+            const response = await apiClient.get(`/v2/projects/${projectId}/workflows/${workflowId}`);
+            const workflow = response.data;
+
+            // Convert workflow data to ReactFlow format
+            const flowNodes = (workflow.data?.nodes || []).map(node => ({
+                id: node.id,
+                type: 'custom',
+                position: { x: node.x || 0, y: node.y || 0 },
+                data: node,
+            }));
+
+            const flowEdges = workflow.data?.edges || [];
+
+            set({
+                nodes: flowNodes,
+                edges: flowEdges,
+                currentProjectId: projectId,
+                currentWorkflowId: workflowId
+            });
+
+            console.log('✅ Workflow loaded successfully');
+        } catch (error) {
+            console.error("Failed to load workflow:", error);
+            // Initialize with empty workflow if load fails
+            set({ nodes: [], edges: [] });
+        }
+    },
+
+    saveWorkflowToV2: async () => {
+        const state = get();
+        const { currentProjectId, currentWorkflowId, nodes, edges } = state;
+
+        if (!currentProjectId || !currentWorkflowId) {
+            console.warn('No workflow set, skipping save');
+            return;
+        }
+
+        try {
+            // Convert ReactFlow nodes back to simple data format
+            const simpleNodes = nodes.map(node => ({
+                id: node.id,
+                x: node.position.x,
+                y: node.position.y,
+                ...node.data
+            }));
+
+            await apiClient.put(
+                `/v2/projects/${currentProjectId}/workflows/${currentWorkflowId}`,
+                {
+                    data: {
+                        nodes: simpleNodes,
+                        edges: edges
+                    }
+                }
+            );
+
+            console.log('✅ Workflow auto-saved');
+        } catch (error) {
+            console.error("Failed to save workflow:", error);
+        }
+    },
+
+    scheduleAutoSave: () => {
+        const state = get();
+
+        // Clear existing timer
+        if (state.autoSaveTimer) {
+            clearTimeout(state.autoSaveTimer);
+        }
+
+        // Schedule new save after 2 seconds of inactivity
+        const timer = setTimeout(() => {
+            get().saveWorkflowToV2();
+        }, 2000);
+
+        set({ autoSaveTimer: timer });
     },
 }));

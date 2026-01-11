@@ -1,6 +1,8 @@
 import json
 from typing import List, Dict, Optional
 from blocks import Block, Connector
+from database import get_collection
+from bson import ObjectId
 
 # Import all block types to allow dynamic instantiation
 from block_types.api_block import APIBlock
@@ -16,11 +18,12 @@ from block_types.loop_block import LoopBlock
 class Project:
     """
     Represents a project containing a collection of blocks and their connections.
-    Supports serialization to and from JSON.
+    Supports serialization to and from JSON and MongoDB persistence.
     """
-    def __init__(self, name: str):
+    def __init__(self, name: str, project_id: Optional[str] = None):
         self.name = name
         self.blocks: Dict[str, Block] = {} # id -> Block
+        self._id = project_id  # MongoDB ObjectId as string
 
     def add_block(self, block: Block):
         """Adds a block to the project."""
@@ -166,5 +169,82 @@ class Project:
                     target,
                     conn_data["target_input"]
                 )
-                
+
         return project
+
+    def save_to_db(self) -> str:
+        """
+        Saves the project to MongoDB.
+        Returns the project ID (as string).
+        """
+        projects_collection = get_collection('projects')
+
+        # Convert project to dict format
+        project_data = json.loads(self.to_json())
+
+        if self._id:
+            # Update existing project
+            projects_collection.update_one(
+                {"_id": ObjectId(self._id)},
+                {"$set": project_data}
+            )
+            return self._id
+        else:
+            # Insert new project
+            result = projects_collection.insert_one(project_data)
+            self._id = str(result.inserted_id)
+            return self._id
+
+    @staticmethod
+    def load_from_db(project_id: str) -> 'Project':
+        """
+        Loads a project from MongoDB by ID.
+        """
+        projects_collection = get_collection('projects')
+
+        project_data = projects_collection.find_one({"_id": ObjectId(project_id)})
+
+        if not project_data:
+            raise ValueError(f"Project with ID {project_id} not found")
+
+        # Convert to JSON string for from_json method
+        project_data_copy = project_data.copy()
+        project_data_copy.pop('_id', None)  # Remove MongoDB _id field
+        json_str = json.dumps(project_data_copy)
+
+        # Create project using existing from_json method
+        project = Project.from_json(json_str)
+        project._id = str(project_data['_id'])
+
+        return project
+
+    @staticmethod
+    def list_all_projects() -> List[Dict]:
+        """
+        Lists all projects in the database.
+        Returns a list of project summaries.
+        """
+        projects_collection = get_collection('projects')
+
+        projects = []
+        for project_data in projects_collection.find():
+            projects.append({
+                "id": str(project_data['_id']),
+                "name": project_data.get('name', 'Untitled'),
+                "block_count": len(project_data.get('blocks', []))
+            })
+
+        return projects
+
+    def delete_from_db(self) -> bool:
+        """
+        Deletes the project from MongoDB.
+        Returns True if successful.
+        """
+        if not self._id:
+            return False
+
+        projects_collection = get_collection('projects')
+        result = projects_collection.delete_one({"_id": ObjectId(self._id)})
+
+        return result.deleted_count > 0

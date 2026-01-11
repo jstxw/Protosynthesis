@@ -12,11 +12,24 @@ from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
 from block_types.loop_block import LoopBlock
 from api_schemas import API_SCHEMAS
+from database import mongodb
+from api_routes import api_v2
 import collections
 import json
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
+
+# Register the new authenticated API routes (v2)
+app.register_blueprint(api_v2)
+
+# Initialize MongoDB connection
+try:
+    mongodb.connect()
+    print("✓ MongoDB connection established")
+except Exception as e:
+    print(f"Warning: Failed to connect to MongoDB: {e}")
+    print("Running in in-memory mode only.")
 
 # ==========================================
 # PART 1: API Block Functionality & Execution Engine
@@ -459,11 +472,84 @@ def load_project():
             json_str = json.dumps(json_data)
         else:
             json_str = json_data
-            
+
         current_project = Project.from_json(json_str)
         return jsonify({"status": "loaded", "project_name": current_project.name})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+# ==========================================
+# PART 3: MongoDB Persistence Endpoints
+# ==========================================
+
+@app.route('/api/project/db/save', methods=['POST'])
+def save_project_to_db():
+    """Saves the current project to MongoDB."""
+    global current_project
+    try:
+        project_id = current_project.save_to_db()
+        return jsonify({
+            "status": "saved",
+            "project_id": project_id,
+            "project_name": current_project.name
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/project/db/load/<project_id>', methods=['GET'])
+def load_project_from_db(project_id):
+    """Loads a project from MongoDB by ID."""
+    global current_project
+    try:
+        current_project = Project.load_from_db(project_id)
+        return jsonify({
+            "status": "loaded",
+            "project_id": current_project._id,
+            "project_name": current_project.name
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+@app.route('/api/project/db/list', methods=['GET'])
+def list_projects():
+    """Lists all projects in the database."""
+    try:
+        projects = Project.list_all_projects()
+        return jsonify({"projects": projects})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/project/db/delete/<project_id>', methods=['DELETE'])
+def delete_project_from_db(project_id):
+    """Deletes a project from MongoDB."""
+    try:
+        # Load the project first to delete it
+        project = Project.load_from_db(project_id)
+        if project.delete_from_db():
+            return jsonify({"status": "deleted", "project_id": project_id})
+        else:
+            return jsonify({"error": "Failed to delete project"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+@app.route('/api/project/db/create', methods=['POST'])
+def create_new_project():
+    """Creates a new project and saves it to MongoDB."""
+    global current_project
+    try:
+        data = request.json
+        project_name = data.get("name", "New Project")
+
+        current_project = Project(project_name)
+        project_id = current_project.save_to_db()
+
+        return jsonify({
+            "status": "created",
+            "project_id": project_id,
+            "project_name": current_project.name
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- Demo Setup ---
 def setup_demo_project():
