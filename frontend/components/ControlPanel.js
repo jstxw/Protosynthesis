@@ -41,7 +41,7 @@ const ControlPanel = () => {
     { type: 'LOGIC', name: 'Logic', description: 'Performs conditional logic.', icon: '/branch.svg' },
     { type: 'TRANSFORM', name: 'Transform', description: 'Modifies data formats.', icon: '/shuffle.svg' },
     { type: 'WAIT', name: 'Wait', description: 'Pauses execution.', icon: '/clock.svg' },
-    { type: 'GET_KEY', name: 'Get Key', description: 'Extracts a value from a JSON object.', icon: '/key.svg' },
+    { type: 'LOOP', name: 'Loop', description: 'Iterates over a list (placeholder).', icon: '/loop.svg' },
     { type: 'DIALOGUE', name: 'Dialogue', description: 'Input and Output display.', icon: '/chat.svg' },
   ];
 

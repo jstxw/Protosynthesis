@@ -11,15 +11,15 @@ const getIconForType = (type) => {
     case 'LOGIC': return '/branch.svg';
     case 'TRANSFORM': return '/shuffle.svg';
     case 'WAIT': return '/clock.svg';
+    case 'LOOP': return '/loop.svg';
     case 'API': return '/window.svg';
-    case 'GET_KEY': return '/key.svg';
     case 'DIALOGUE': return '/chat.svg';
     default: return null;
   }
 };
 
 const CustomNode = ({ data }) => {
-  const { updateNode, updateInputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId } = useStore();
+  const { updateNode, updateInputValue, updateOutputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId } = useStore();
   const [name, setName] = useState(data.name || '');
 
   useEffect(() => {
@@ -48,10 +48,6 @@ const CustomNode = ({ data }) => {
 
   const handleDelayChange = (e) => {
     updateNode(data.id, { delay: e.target.value });
-  };
-
-  const handleMockResponseChange = (e) => {
-    updateInputValue(data.id, 'mock_response', e.target.value);
   };
 
   // The menu component, rendered conditionally
@@ -166,7 +162,7 @@ const CustomNode = ({ data }) => {
       case 'LOGIC': return 'node-header-logic';
       case 'TRANSFORM': return 'node-header-transform';
       case 'WAIT': return 'node-header-wait';
-      case 'GET_KEY': return 'node-header-logic'; // Reuse logic color
+      case 'LOOP': return 'node-header-logic'; // Reuse logic color
       case 'DIALOGUE': return 'node-header-dialogue';
       default: return '';
     }
@@ -254,6 +250,7 @@ const CustomNode = ({ data }) => {
               style={{ width: '100%', marginBottom: '5px' }}
             >
               <option value="to_string">To String</option>
+              <option value="to_string">Get Key from JSON</option>
               <option value="to_json">To JSON</option>
               <option value="params_to_json">Params to JSON</option>
             </select>
@@ -309,19 +306,6 @@ const CustomNode = ({ data }) => {
           </div>
         )}
 
-        {data.type === 'DIALOGUE' && (
-          <div className="node-config">
-            
-            <label style={{marginTop: '10px'}}>Mock Response (for backend)</label>
-            <input
-              type="text"
-              className="nodrag"
-              defaultValue={data.inputs.find(i => i.key === 'mock_response')?.value || ''}
-              onBlur={handleMockResponseChange}
-              style={{ width: '100%' }}
-            />
-          </div>
-        )}
       </div>
 
       {data.menu_open && <SettingsMenu />}

@@ -17,6 +17,7 @@ export const useStore = create((set, get) => ({
     activeBlockId: null,
     executionLogs: [],
     hoveredNodeId: null,
+    isExecuting: false,
 
     // --- DATA FETCHING ---
     fetchApiSchemas: async () => {
@@ -187,6 +188,33 @@ export const useStore = create((set, get) => ({
         }
     },
 
+    updateOutputValue: async (nodeId, outputKey, value) => {
+        try {
+            // Call the new backend endpoint
+            await axios.post(`${API_URL}/block/update_output_value`, {
+                block_id: nodeId,
+                output_key: outputKey,
+                value: value,
+            });
+
+            // Update the local state optimistically
+            set(state => ({
+                nodes: state.nodes.map(node => {
+                    if (node.id === nodeId) {
+                        const newOutputs = node.data.outputs.map(out =>
+                            out.key === outputKey ? { ...out, value: value } : out
+                        );
+                        return { ...node, data: { ...node.data, outputs: newOutputs } };
+                    }
+                    return node;
+                })
+            }));
+        } catch (error) {
+            console.error("Failed to update output value:", error);
+            alert("Failed to save user input.");
+        }
+    },
+
     removeBlock: async (nodeId) => {
         try {
             await axios.post(`${API_URL}/block/remove`, {block_id: nodeId});
@@ -216,9 +244,10 @@ export const useStore = create((set, get) => ({
 
     setHoveredNodeId: (nodeId) => {
         set(state => {
+            if (state.isExecuting) return {}; // Ignore hover during execution
             if (state.hoveredNodeId === nodeId) return {};
             
-            const targetId = nodeId || state.activeBlockId;
+            const targetId = nodeId;
             const newEdges = state.edges.map(edge => {
                 const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
                 const newClassName = isConnected ? 'animated-edge' : '';
@@ -250,7 +279,7 @@ export const useStore = create((set, get) => ({
 
     // --- EXECUTION ---
     executeGraph: async () => {
-        set({ executionLogs: ["Starting execution..."], activeBlockId: null, executionResult: null });
+        set({ isExecuting: true, executionLogs: ["Starting execution..."], activeBlockId: null, executionResult: null });
 
         try {
             const response = await fetch(`${API_URL}/execute`, {
@@ -277,34 +306,39 @@ export const useStore = create((set, get) => ({
                         
                         if (event.type === 'start') {
                             set(state => {
-                                const targetId = state.hoveredNodeId || event.block_id;
+                                const newActiveId = event.block_id;
                                 const newEdges = state.edges.map(edge => {
-                                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
+                                    const isConnected = newActiveId && (edge.source === newActiveId || edge.target === newActiveId);
                                     const newClassName = isConnected ? 'animated-edge' : '';
                                     return { ...edge, className: newClassName };
                                 });
-                                return { activeBlockId: event.block_id, edges: newEdges };
+                                return { activeBlockId: newActiveId, edges: newEdges };
                             });
+
+                            // Handle Dialogue Interactions
+                            if (event.block_type === 'DIALOGUE') {
+                                let messageContent = event.inputs && event.inputs.message;
+
+                                if (typeof messageContent === 'object' && messageContent !== null) {
+                                    messageContent = JSON.stringify(messageContent, null, 2);
+                                }
+                                
+                                // This is a blocking call on the main thread.
+                                const userInput = window.prompt(`${messageContent || ''}`, "") || "";
+                                
+                                // Update the local UI immediately for a responsive feel
+                                get().updateOutputValue(event.block_id, 'response', userInput);
+
+                                // Tell the backend to unblock the execution thread.
+                                axios.post(`${API_URL}/execution/respond`, {
+                                    block_id: event.block_id,
+                                    value: userInput
+                                });
+                            }
                         } else if (event.type === 'progress') {
                             set(state => ({
                                 executionLogs: [...(state.executionLogs || []), `Executed ${event.name} (${event.block_type})`]
                             }));
-
-                            // Handle Dialogue Interactions
-                            if (event.block_type === 'DIALOGUE') {
-                                 const requireInput = event.inputs && event.inputs.require_input;
-                                 let messageContent = event.inputs && event.inputs.message;
-
-                                 if (typeof messageContent === 'object' && messageContent !== null) {
-                                     messageContent = JSON.stringify(messageContent, null, 2);
-                                 }
-
-                                 if (requireInput) {
-                                     window.prompt(`[${event.name}] Input required:\n${messageContent || ''}`, "");
-                                 } else {
-                                     window.alert(`[${event.name}] Message:\n${messageContent || ''}`);
-                                 }
-                             }
 
                             // Update node outputs in real-time
                             set(state => ({
@@ -325,6 +359,7 @@ export const useStore = create((set, get) => ({
                             }));
                         } else if (event.type === 'complete') {
                             set(state => {
+                                // Re-evaluate edges based on hover state now that execution is over
                                 const targetId = state.hoveredNodeId;
                                 const newEdges = state.edges.map(edge => {
                                     const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
@@ -333,6 +368,7 @@ export const useStore = create((set, get) => ({
                                 });
                                 return {
                                     activeBlockId: null,
+                                    isExecuting: false,
                                     executionLogs: [...(state.executionLogs || []), "Execution complete."],
                                     edges: newEdges
                                 };
@@ -346,6 +382,7 @@ export const useStore = create((set, get) => ({
         } catch (error) {
             console.error("Failed to execute graph:", error);
             set(state => {
+                // Re-evaluate edges based on hover state
                 const targetId = state.hoveredNodeId;
                 const newEdges = state.edges.map(edge => {
                     const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
@@ -354,6 +391,7 @@ export const useStore = create((set, get) => ({
                 });
                 return { 
                     activeBlockId: null,
+                    isExecuting: false,
                     edges: newEdges,
                     executionLogs: [...(state.executionLogs || []), `Error: ${error.message}`] 
                 };

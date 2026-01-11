@@ -1,6 +1,6 @@
 :root {
     --background-color: #3f464e; /* Poorly wiped chalkboard grey */
-    --surface-color: #5d4037; /* Wood texture color */
+    --surface-color: #BCAAA4; /* Beige wood color */
     --node-bg-color: #fffdf5; /* Paper note color */
     --node-text-color: #212121;
     --border-color: #d7ccc8; /* Light wood/chalk border */
@@ -8,8 +8,8 @@
     --text-muted-color: #bcaaa4;
     --primary-color: #ffffff;
     --handle-color: #1a1a1a;
-    --hover-color: #3e2723; /* Even darker wood for hover effect */
-    --item-bg-color: #4e342e; /* Background for items on wood panels */
+    --hover-color: #EFEBE9; /* Darker beige for hover effect */
+    --item-bg-color: #D7CCC8; /* Background for items on beige panels */
     --danger-color: #ef5350;
     --color-green: #c5e1a5;
     --color-red: #f48fb1;
@@ -19,6 +19,8 @@
     --button-hover-green: #aed581;
     --input-bg-color: #f5f5f5; /* Inputs on paper nodes */
     --input-border-color: #e0e0e0;
+    --panel-text-color: #212121;
+    --panel-text-muted-color: #5f5f5f;
 }
 
 /* Basic Reset & App Layout */
@@ -74,6 +76,7 @@ input, textarea, select, button {
     background: var(--surface-color);
     display: flex;
     flex-direction: column;
+    color: var(--panel-text-color);
 }
 
 .controls-section:last-child {
@@ -366,7 +369,7 @@ input, textarea, select, button {
 }
 
 .block-list-item-icon {
-    filter: invert(80%);
+    /* filter removed for light backgrounds */
 }
 
 .block-list-item-content {
@@ -380,7 +383,7 @@ input, textarea, select, button {
 
 .block-list-item-desc {
     font-size: 12px;
-    color: var(--text-muted-color);
+    color: var(--panel-text-muted-color);
     margin-top: 2px;
 }
 
@@ -392,7 +395,7 @@ input, textarea, select, button {
     background-color: var(--item-bg-color);
     border: none;
     border-radius: 4px;
-    color: var(--text-color);
+    color: var(--panel-text-color);
     font-size: 14px;
 }
 
@@ -451,12 +454,12 @@ input, textarea, select, button {
     display: flex;
     flex-direction: column;
     z-index: 20;
+    color: var(--panel-text-color);
 }
 
 .execution-log-header {
     padding: 8px 12px;
     background: var(--item-bg-color);
-    border-bottom: 1px solid var(--border-color);
     font-weight: bold;
     font-size: 12px;
     display: flex;
@@ -473,13 +476,13 @@ input, textarea, select, button {
 
 .log-entry {
     margin-bottom: 4px;
-    color: var(--text-color);
+    color: inherit;
 }
 
 .close-log-button {
     background: transparent;
     border: none;
-    color: var(--text-muted-color);
+    color: var(--panel-text-muted-color);
     cursor: pointer;
     font-size: 16px;
     line-height: 1;
@@ -487,7 +490,7 @@ input, textarea, select, button {
 }
 
 .close-log-button:hover {
-    color: var(--text-color);
+    color: var(--panel-text-color);
 }
 
 .port-value-compact {

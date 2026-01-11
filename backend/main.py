@@ -10,7 +10,7 @@ from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
 from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
-from block_types.get_key_block import GetKeyBlock
+from block_types.loop_block import LoopBlock
 from api_schemas import API_SCHEMAS
 import collections
 import json
@@ -68,7 +68,9 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
         # Yield start event for immediate highlighting
         yield json.dumps({
             "type": "start",
-            "block_id": current_block.id
+            "block_id": current_block.id,
+            "block_type": current_block.block_type,
+            "inputs": current_block.inputs
         }) + "\n"
         
         # Execute the block
@@ -203,8 +205,8 @@ def add_block():
         elif block_type == "DIALOGUE":
             message = data.get("message", "")
             new_block = DialogueBlock(name, message=message, x=x, y=y)
-        elif block_type == "GET_KEY":
-            new_block = GetKeyBlock(name, x=x, y=y)
+        elif block_type == "LOOP":
+            new_block = LoopBlock(name, x=x, y=y)
         else:
             return jsonify({"error": f"Unknown block type: {block_type}"}), 400
             
@@ -276,6 +278,45 @@ def update_block():
         if "delay" in data:
             block.delay = float(data["delay"])
             
+    return jsonify({"status": "updated", "block": block.to_dict()})
+
+@app.route('/api/execution/respond', methods=['POST'])
+def execution_respond():
+    """
+    Receives user input from a frontend dialogue prompt during execution
+    and sets it on the corresponding block instance to unblock it.
+    """
+    data = request.json
+    block_id = data.get("block_id")
+    value = data.get("value")
+    
+    block = current_project.blocks.get(block_id)
+    if block and isinstance(block, DialogueBlock):
+        block.user_response = value
+        return jsonify({"status": "received"})
+        
+    return jsonify({"error": "Block not found or not a dialogue block"}), 404
+
+@app.route('/api/block/update_output_value', methods=['POST'])
+def update_block_output_value():
+    """
+    Endpoint for the frontend to set the value of an output port.
+    Used by interactive blocks like DialogueBlock.
+    """
+    data = request.json
+    block_id = data.get("block_id")
+    output_key = data.get("output_key")
+    value = data.get("value")
+    
+    block = current_project.blocks.get(block_id)
+    if not block:
+        return jsonify({"error": "Block not found"}), 404
+        
+    if output_key not in block.outputs:
+        return jsonify({"error": f"Output '{output_key}' not found on block"}), 404
+    
+    block.outputs[output_key] = value
+    
     return jsonify({"status": "updated", "block": block.to_dict()})
 
 @app.route('/api/block/update_input_value', methods=['POST'])

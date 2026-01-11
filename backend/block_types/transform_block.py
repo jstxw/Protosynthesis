@@ -51,6 +51,11 @@ class TransformBlock(Block):
             field_list = [f.strip() for f in self.fields.split(",") if f.strip()]
             for f in field_list:
                 self.register_input(f, data_type="any")
+        
+        elif self.transformation_type == "get_key":
+            self.register_input("json_obj", data_type="json")
+            self.register_input("key", data_type="string")
+            self.register_output("value", data_type="any")
 
     def execute(self):
         if self.transformation_type == "to_string":
@@ -68,6 +73,20 @@ class TransformBlock(Block):
             for f in field_list:
                 result[f] = self.inputs.get(f)
             self.outputs["result"] = result
+        elif self.transformation_type == "get_key":
+            json_obj = self.inputs.get("json_obj")
+            key = self.inputs.get("key")
+            
+            if not isinstance(json_obj, dict):
+                try:
+                    json_obj = json.loads(json_obj) if isinstance(json_obj, str) else {}
+                except:
+                    json_obj = {}
+            
+            if isinstance(json_obj, dict) and key is not None:
+                self.outputs["value"] = json_obj.get(key)
+            else:
+                self.outputs["value"] = None
         else:
             data = self.inputs.get("input")
             self.outputs["result"] = data
