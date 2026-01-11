@@ -13,7 +13,7 @@ class StringBuilderBlock(Block):
     def __init__(self, name: str, template: str = "", x: float = 0.0, y: float = 0.0):
         super().__init__(name, block_type="STRING_BUILDER", x=x, y=y)
         self._template = ""
-        self.register_input("trigger", data_type="any", hidden=True)
+        self.register_input("trigger", data_type="any", hidden=False)
         self.register_output("result", data_type="string")
         # Use the property setter to parse the initial template
         self.template = template

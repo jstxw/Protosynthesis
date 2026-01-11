@@ -20,7 +20,7 @@ class ApiKeyBlock(Block):
         self.available_keys = self._get_available_keys()
 
         # This trigger allows the block to be part of a control flow
-        self.register_input("trigger", data_type="any", hidden=True)
+        self.register_input("trigger", data_type="any", hidden=False)
         self.register_output("key", data_type="string")
 
     def _get_available_keys(self):
