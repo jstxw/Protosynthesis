@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -19,6 +19,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { projectService, workflowService, type Project as ApiProject } from '@/services/projects';
 
 // Logo component
 function Logo() {
@@ -32,7 +33,7 @@ function Logo() {
   );
 }
 
-// Project data type
+// Project data type for UI
 interface Project {
   id: string;
   name: string;
@@ -42,8 +43,31 @@ interface Project {
   thumbnail?: string;
 }
 
-// No projects - start fresh
-const mockProjects: Project[] = [];
+// Convert API project to UI project
+function convertApiProject(apiProject: ApiProject): Project {
+  // Calculate total nodes and edges across all workflows
+  let totalNodes = 0;
+  let totalEdges = 0;
+  let latestUpdate = new Date(apiProject.created_at);
+
+  apiProject.workflows?.forEach((workflow) => {
+    totalNodes += workflow.data?.nodes?.length || 0;
+    totalEdges += workflow.data?.edges?.length || 0;
+
+    const workflowUpdate = new Date(workflow.updated_at || workflow.created_at);
+    if (workflowUpdate > latestUpdate) {
+      latestUpdate = workflowUpdate;
+    }
+  });
+
+  return {
+    id: apiProject.project_id,
+    name: apiProject.name,
+    nodeCount: totalNodes,
+    edgeCount: totalEdges,
+    updatedAt: latestUpdate,
+  };
+}
 
 // Format relative time
 function formatRelativeTime(date: Date): string {
@@ -157,12 +181,22 @@ function TemplateIcon({ template }: { template: { icon: React.ElementType; color
 }
 
 // New Project Modal
-function NewProjectModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function NewProjectModal({
+  isOpen,
+  onClose,
+  onProjectCreated
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onProjectCreated: () => void;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<'scratch' | 'template'>('scratch');
   const [projectName, setProjectName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const categories = ['All', 'Payment', 'Email', 'Database', 'AI', 'Messaging', 'Integration'];
 
@@ -261,10 +295,43 @@ function NewProjectModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
     ? templates
     : templates.filter(t => t.category === selectedCategory);
 
-  const handleCreate = () => {
-    // Navigate to the flow canvas (home page)
-    router.push('/');
-    onClose();
+  const handleCreate = async () => {
+    if (!projectName.trim()) {
+      setError('Please enter a project name');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      // Create the project
+      const project = await projectService.createProject({
+        name: projectName.trim()
+      });
+
+      console.log('✅ Project created:', project);
+
+      // Create a workflow in the project
+      const workflow = await workflowService.createWorkflow(project.project_id, {
+        name: 'Main Workflow',
+        data: { nodes: [], edges: [] }
+      });
+
+      console.log('✅ Workflow created:', workflow);
+
+      // Notify parent to refresh projects list
+      onProjectCreated();
+
+      // Navigate to the workflow editor with the project and workflow IDs
+      router.push(`/workflow?project=${project.project_id}&workflow=${workflow.workflow_id}`);
+      onClose();
+    } catch (err: any) {
+      console.error('❌ Failed to create project:', err);
+      setError(err.message || 'Failed to create project. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -420,20 +487,28 @@ function NewProjectModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
               placeholder="My API Workflow"
               className="form-input"
               autoFocus
+              disabled={isCreating}
             />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/20">
+              <p className="text-small text-status-error">{error}</p>
+            </div>
+          )}
         </div>
 
         <div className="modal-footer flex-shrink-0 border-t border-border bg-black">
-          <button onClick={onClose} className="btn-secondary">
+          <button onClick={onClose} className="btn-secondary" disabled={isCreating}>
             Cancel
           </button>
           <button
             onClick={handleCreate}
-            disabled={mode === 'template' && !selectedTemplate}
+            disabled={isCreating || !projectName.trim() || (mode === 'template' && !selectedTemplate)}
             className="btn-primary"
           >
-            Create Project
+            {isCreating ? 'Creating...' : 'Create Project'}
           </button>
         </div>
       </div>
@@ -449,6 +524,31 @@ export function Dashboard() {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch projects on mount
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiProjects = await projectService.getAllProjects();
+      const uiProjects = apiProjects.map(convertApiProject);
+      setProjects(uiProjects);
+      console.log('✅ Fetched projects:', uiProjects);
+    } catch (err: any) {
+      console.error('❌ Failed to fetch projects:', err);
+      setError('Failed to load projects');
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -460,7 +560,7 @@ export function Dashboard() {
 
   // Filter and sort projects
   const filteredProjects = useMemo(() => {
-    let result = [...mockProjects];
+    let result = [...projects];
 
     // Filter by search
     if (searchQuery) {
@@ -483,7 +583,7 @@ export function Dashboard() {
     });
 
     return result;
-  }, [searchQuery, sortBy]);
+  }, [projects, searchQuery, sortBy]);
 
   return (
     <div className="min-h-screen bg-app-bg">
@@ -565,13 +665,24 @@ export function Dashboard() {
 
         {/* Projects Grid - White Border Container */}
         <div className="border-2 border-white/20 mt-9 rounded-sm p-8 min-h-[400px]">
-          {filteredProjects.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center my-24">
+              <p className="text-body text-text-secondary">Loading projects...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center my-24">
+              <p className="text-body text-status-error mb-4">{error}</p>
+              <button onClick={fetchProjects} className="btn-secondary">
+                Retry
+              </button>
+            </div>
+          ) : filteredProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  onOpen={() => router.push('/')}
+                  onOpen={() => router.push('/workflow')}
                 />
               ))}
             </div>
@@ -596,6 +707,7 @@ export function Dashboard() {
       <NewProjectModal
         isOpen={showNewProjectModal}
         onClose={() => setShowNewProjectModal(false)}
+        onProjectCreated={fetchProjects}
       />
     </div>
   );

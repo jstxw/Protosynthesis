@@ -1,6 +1,7 @@
 import { Nunito } from 'next/font/google';
 import 'reactflow/dist/style.css';
 import './globals.css';
+import { AuthProvider } from '../contexts/AuthContext';
 
 const nunito = Nunito({ subsets: ['latin'] });
 
@@ -12,7 +13,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={nunito.className}>{children}</body>
+      <body className={nunito.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

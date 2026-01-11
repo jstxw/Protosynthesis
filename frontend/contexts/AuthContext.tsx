@@ -102,7 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(data.user);
 
       // Navigate to dashboard
-      router.push('/dashboard');
+      router.push('/');
     } catch (error) {
       throw error;
     } finally {
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(data.user);
 
       // Navigate to dashboard
-      router.push('/dashboard');
+      router.push('/');
     } catch (error) {
       throw error;
     } finally {

@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStore } from '../helpers/store';
 import Image from 'next/image';
 
 const ControlPanel = () => {
+  const router = useRouter();
   const { addBlock, apiSchemas, executeGraph, saveProject, loadProject } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef(null);
@@ -53,6 +55,9 @@ const ControlPanel = () => {
   return (
     <aside className="control-panel" onDrop={(e) => e.preventDefault()}>
       <div className="panel-header-buttons">
+        <button onClick={() => router.push('/')} title="Back to Dashboard">
+          <Image src="/arrow-left.svg" alt="Back" width={20} height={20} />
+        </button>
         <button onClick={saveProject} title="Save Project">
           <Image src="/save.svg" alt="Save" width={20} height={20} />
         </button>
