@@ -1,5 +1,8 @@
+import { Nunito } from 'next/font/google';
 import 'reactflow/dist/style.css';
 import './globals.css';
+
+const nunito = Nunito({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Flow Builder',
@@ -9,7 +12,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={nunito.className}>{children}</body>
     </html>
   );
 }

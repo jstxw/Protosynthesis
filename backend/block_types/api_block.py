@@ -4,6 +4,27 @@ from blocks import Block
 from api_schemas import API_SCHEMAS
 from typing import Set
 
+def _get_nested_value(data, path):
+    """
+    Safely retrieves a nested value from a dict/list structure using a dot-separated path.
+    e.g., "output.0.content.0.text"
+    """
+    keys = path.split('.')
+    current = data
+    for key in keys:
+        if isinstance(current, list):
+            try:
+                current = current[int(key)]
+            except (IndexError, ValueError):
+                return None
+        elif isinstance(current, dict):
+            current = current.get(key)
+        else:
+            return None
+        if current is None:
+            return None
+    return current
+
 class APIBlock(Block):
     """
     A block that makes an HTTP request to an API, with dynamically
@@ -51,11 +72,20 @@ class APIBlock(Block):
             # Handling for structured schemas
             for input_type in ["path", "params", "body", "headers"]:
                 for key, meta in schema_inputs.get(input_type, {}).items():
-                    self.register_input(key, data_type=meta.get("type", "any"), default_value=meta.get("default"))
+                    self.register_input(
+                        key, 
+                        data_type=meta.get("type", "any"), 
+                        default_value=meta.get("default"),
+                        hidden=meta.get("hidden", False)
+                    )
 
         # Register new outputs from the schema
         for key, meta in schema.get("outputs", {}).items():
-            self.register_output(key, data_type=meta.get("type", "any"))
+            self.register_output(
+                key, 
+                data_type=meta.get("type", "any"),
+                hidden=meta.get("hidden", False)
+            )
 
     def execute(self):
         """Executes the API call, with validation and error handling."""
@@ -81,9 +111,9 @@ class APIBlock(Block):
 
         if self.schema_key == "custom":
             url = self.inputs.get("url", "")
-            params = self.inputs.get("params", {})
-            body = self.inputs.get("body", {})
-            headers = self.inputs.get("headers", {})
+            params = self._parse_json_safe(self.inputs.get("params"))
+            body = self._parse_json_safe(self.inputs.get("body"))
+            headers = self._parse_json_safe(self.inputs.get("headers"))
         else:
             schema_inputs = schema.get("inputs", {})
             # Format URL with path parameters
@@ -96,7 +126,15 @@ class APIBlock(Block):
             
             # Gather query params and body data
             params = {key: self.inputs.get(key) for key in schema_inputs.get("params", {}) if self.inputs.get(key) is not None}
-            body = {key: self.inputs.get(key) for key in schema_inputs.get("body", {}) if self.inputs.get(key) is not None}
+            
+            body = {}
+            for key, meta in schema_inputs.get("body", {}).items():
+                val = self.inputs.get(key)
+                if val is not None:
+                    if meta.get("type") == "json":
+                        val = self._parse_json_safe(val)
+                    body[key] = val
+            
             headers = {key: self.inputs.get(key) for key in schema_inputs.get("headers", {}) if self.inputs.get(key) is not None}
 
         # --- Validation ---
@@ -106,11 +144,17 @@ class APIBlock(Block):
         
         # --- Execute Request ---
         try:
+            json_payload = body if self.method.upper() in ["POST", "PUT", "PATCH"] else None
+            print(f"API Executing: {self.method.upper()} {url}")
+            print(f"  Params: {params}")
+            print(f"  Headers: {headers}")
+            print(f"  JSON Body: {json_payload}")
+
             response = requests.request(
                 method=self.method.upper(),
                 url=url,
                 params=params,
-                json=body if self.method.upper() in ["POST", "PUT", "PATCH"] else None,
+                json=json_payload,
                 headers=headers,
                 timeout=10
             )
@@ -122,8 +166,11 @@ class APIBlock(Block):
 
             # Map response data to dynamic outputs
             schema_outputs = schema.get("outputs", {})
-            for key in schema_outputs:
-                if key in response_data:
+            for key, meta in schema_outputs.items():
+                path = meta.get("path")
+                if path:
+                    self.outputs[key] = _get_nested_value(response_data, path)
+                elif key in response_data:
                     self.outputs[key] = response_data[key]
 
         except requests.exceptions.RequestException as e:
@@ -159,3 +206,13 @@ class APIBlock(Block):
             if key in self.outputs: del self.outputs[key]
             if key in self.output_meta: del self.output_meta[key]
             if key in self.output_connectors: del self.output_connectors[key]
+
+    def _parse_json_safe(self, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return {}
+        return value if value is not None else {}
+            
+            

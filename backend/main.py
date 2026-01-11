@@ -9,6 +9,8 @@ from block_types.transform_block import TransformBlock
 from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
 from block_types.wait_block import WaitBlock
+from block_types.dialogue_block import DialogueBlock
+from block_types.get_key_block import GetKeyBlock
 from api_schemas import API_SCHEMAS
 import collections
 import json
@@ -81,7 +83,8 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
                 "block_id": current_block.id,
                 "name": current_block.name,
                 "block_type": current_block.block_type,
-                "outputs": current_block.outputs
+                "outputs": current_block.outputs,
+                "inputs": current_block.inputs
             }) + "\n"
             
         except Exception as e:
@@ -197,6 +200,11 @@ def add_block():
         elif block_type == "WAIT":
             delay = data.get("delay", 1.0)
             new_block = WaitBlock(name, delay=delay, x=x, y=y)
+        elif block_type == "DIALOGUE":
+            message = data.get("message", "")
+            new_block = DialogueBlock(name, message=message, x=x, y=y)
+        elif block_type == "GET_KEY":
+            new_block = GetKeyBlock(name, x=x, y=y)
         else:
             return jsonify({"error": f"Unknown block type: {block_type}"}), 400
             

@@ -46,45 +46,37 @@ API_SCHEMAS = {
             "name": {"type": "string"}
         }
     },
-    "jsonplaceholder_get": {
-        "name": "JSONPlaceholder - Get Post",
-        "url": "https://jsonplaceholder.typicode.com/posts/{post_id}",
-        "method": "GET",
-        "doc_url": "https://jsonplaceholder.typicode.com/",
-        "inputs": {
-            # 'post_id' is a path parameter
-            "path": {
-                "post_id": {"type": "number", "default": 1}
-            }
-        },
-        "outputs": {
-            "userId": {"type": "number"},
-            "id": {"type": "number"},
-            "title": {"type": "string"},
-            "body": {"type": "string"}
-        }
-    },
-    "discord_webhook": {
-        "name": "Webhook Trigger (Discord)",
-        "url": "https://discord.com/api/webhooks/{webhook_id}/{webhook_token}",
+    "openai_chat": {
+        "name": "OpenAI Responses API",
+        "url": "https://api.openai.com/v1/responses",
         "method": "POST",
-        "doc_url": "https://discord.com/developers/docs/resources/webhook",
+        "doc_url": "https://platform.openai.com/docs/api-reference/responses",
         "inputs": {
-            "path": {
-                "webhook_id": {"type": "string", "default": ""},
-                "webhook_token": {"type": "string", "default": ""}
+            "headers": {
+                "Authorization": {"type": "string", "default": "Bearer YOUR_API_KEY"}
             },
             "body": {
-                "content": {"type": "string", "default": "Hello from Flow Builder!"},
-                "username": {"type": "string", "default": "Bot"}
+                "model": {"type": "string", "default": "gpt-4.1"},
+                "input": {"type": "string", "default": "Tell me a three sentence bedtime story about a unicorn."},
+                "temperature": {"type": "number", "default": 1.0, "hidden": True},
+                "top_p": {"type": "number", "default": 1.0, "hidden": True},
+                "max_output_tokens": {"type": "number", "default": None, "hidden": True},
+                "store": {"type": "boolean", "default": True, "hidden": True},
+                "metadata": {"type": "json", "default": {}, "hidden": True}
             }
         },
         "outputs": {
-            "status_code": {"type": "number"}
+            "message_text": {"type": "string", "path": "output.0.content.0.text"},
+            "output_full": {"type": "json", "path": "output"},
+            "usage": {"type": "json"},
+            "id": {"type": "string", "hidden": True},
+            "status": {"type": "string", "hidden": True},
+            "model": {"type": "string", "hidden": True},
+            "created_at": {"type": "number", "hidden": True}
         }
     },
     "google_maps_geocode": {
-        "name": "Map Data (Google Geocoding)",
+        "name": "Google Maps Data",
         "url": "https://maps.googleapis.com/maps/api/geocode/json",
         "method": "GET",
         "doc_url": "https://developers.google.com/maps/documentation/geocoding/overview",
@@ -100,7 +92,7 @@ API_SCHEMAS = {
         }
     },
     "airtable_list": {
-        "name": "Airtable - List Records",
+        "name": "Airtable",
         "url": "https://api.airtable.com/v0/{base_id}/{table_name}",
         "method": "GET",
         "doc_url": "https://airtable.com/api",
@@ -117,27 +109,8 @@ API_SCHEMAS = {
             "records": {"type": "json"}
         }
     },
-    "openai_chat": {
-        "name": "OpenAI - Chat Completion",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "method": "POST",
-        "doc_url": "https://platform.openai.com/docs/api-reference/chat",
-        "inputs": {
-            "headers": {
-                "Authorization": {"type": "string", "default": "Bearer YOUR_API_KEY"}
-            },
-            "body": {
-                "model": {"type": "string", "default": "gpt-3.5-turbo"},
-                "messages": {"type": "json", "default": [{"role": "user", "content": "Hello!"}]}
-            }
-        },
-        "outputs": {
-            "choices": {"type": "json"},
-            "usage": {"type": "json"}
-        }
-    },
     "twilio_sms": {
-        "name": "Twilio - Send SMS",
+        "name": "Twilio Send SMS",
         "url": "https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json",
         "method": "POST",
         "doc_url": "https://www.twilio.com/docs/sms/api/message-resource",
@@ -160,7 +133,7 @@ API_SCHEMAS = {
         }
     },
     "mongodb_find": {
-        "name": "MongoDB Atlas - Find One",
+        "name": "MongoDB Atlas Find One",
         "url": "https://data.mongodb-api.com/app/{app_id}/endpoint/data/v1/action/findOne",
         "method": "POST",
         "doc_url": "https://www.mongodb.com/docs/atlas/app-services/data-api/openapi/",

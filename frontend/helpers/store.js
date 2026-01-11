@@ -218,8 +218,9 @@ export const useStore = create((set, get) => ({
         set(state => {
             if (state.hoveredNodeId === nodeId) return {};
             
+            const targetId = nodeId || state.activeBlockId;
             const newEdges = state.edges.map(edge => {
-                const isConnected = nodeId && (edge.source === nodeId || edge.target === nodeId);
+                const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
                 const newClassName = isConnected ? 'animated-edge' : '';
                 if (edge.className === newClassName) return edge;
                 return { ...edge, className: newClassName };
@@ -275,11 +276,35 @@ export const useStore = create((set, get) => ({
                         const event = JSON.parse(line);
                         
                         if (event.type === 'start') {
-                            set({ activeBlockId: event.block_id });
+                            set(state => {
+                                const targetId = state.hoveredNodeId || event.block_id;
+                                const newEdges = state.edges.map(edge => {
+                                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
+                                    const newClassName = isConnected ? 'animated-edge' : '';
+                                    return { ...edge, className: newClassName };
+                                });
+                                return { activeBlockId: event.block_id, edges: newEdges };
+                            });
                         } else if (event.type === 'progress') {
                             set(state => ({
                                 executionLogs: [...(state.executionLogs || []), `Executed ${event.name} (${event.block_type})`]
                             }));
+
+                            // Handle Dialogue Interactions
+                            if (event.block_type === 'DIALOGUE') {
+                                 const requireInput = event.inputs && event.inputs.require_input;
+                                 let messageContent = event.inputs && event.inputs.message;
+
+                                 if (typeof messageContent === 'object' && messageContent !== null) {
+                                     messageContent = JSON.stringify(messageContent, null, 2);
+                                 }
+
+                                 if (requireInput) {
+                                     window.prompt(`[${event.name}] Input required:\n${messageContent || ''}`, "");
+                                 } else {
+                                     window.alert(`[${event.name}] Message:\n${messageContent || ''}`);
+                                 }
+                             }
 
                             // Update node outputs in real-time
                             set(state => ({
@@ -299,10 +324,19 @@ export const useStore = create((set, get) => ({
                                 executionLogs: [...(state.executionLogs || []), `Error in ${event.name}: ${event.error}`]
                             }));
                         } else if (event.type === 'complete') {
-                            set(state => ({
-                                activeBlockId: null,
-                                executionLogs: [...(state.executionLogs || []), "Execution complete."]
-                            }));
+                            set(state => {
+                                const targetId = state.hoveredNodeId;
+                                const newEdges = state.edges.map(edge => {
+                                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
+                                    const newClassName = isConnected ? 'animated-edge' : '';
+                                    return { ...edge, className: newClassName };
+                                });
+                                return {
+                                    activeBlockId: null,
+                                    executionLogs: [...(state.executionLogs || []), "Execution complete."],
+                                    edges: newEdges
+                                };
+                            });
                         }
                     } catch (e) {
                         console.error("Error parsing stream line:", e);
@@ -311,9 +345,19 @@ export const useStore = create((set, get) => ({
             }
         } catch (error) {
             console.error("Failed to execute graph:", error);
-            set(state => ({ 
-                executionLogs: [...(state.executionLogs || []), `Error: ${error.message}`] 
-            }));
+            set(state => {
+                const targetId = state.hoveredNodeId;
+                const newEdges = state.edges.map(edge => {
+                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
+                    const newClassName = isConnected ? 'animated-edge' : '';
+                    return { ...edge, className: newClassName };
+                });
+                return { 
+                    activeBlockId: null,
+                    edges: newEdges,
+                    executionLogs: [...(state.executionLogs || []), `Error: ${error.message}`] 
+                };
+            });
         }
     },
 
