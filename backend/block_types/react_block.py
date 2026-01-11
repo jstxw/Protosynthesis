@@ -1,4 +1,4 @@
-from backend.blocks import Block
+from blocks import Block
 
 class ReactBlock(Block):
     """

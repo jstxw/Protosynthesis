@@ -1,5 +1,5 @@
 import time
-from backend.blocks import Block
+from blocks import Block
 
 class WaitBlock(Block):
     """
