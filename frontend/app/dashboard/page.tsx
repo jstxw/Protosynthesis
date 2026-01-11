@@ -119,7 +119,7 @@ export function Dashboard() {
       const newProject = await projectService.createProject({ name: newProjectName });
 
       // Create initial workflow
-      await workflowService.createWorkflow(newProject.project_id, {
+      const newWorkflow = await workflowService.createWorkflow(newProject.project_id, {
         name: 'Main Workflow',
         data: { nodes: [], edges: [] }
       });
@@ -127,7 +127,7 @@ export function Dashboard() {
       await fetchProjects();
       setShowNewProjectModal(false);
       setNewProjectName('');
-      router.push(`/workflow?project=${newProject.project_id}`);
+      router.push(`/workflow?project=${newProject.project_id}&workflow=${newWorkflow.workflow_id}`);
     } catch (err: any) {
       console.error('Failed to create project:', err);
       setError(err.message || 'Failed to create project');
@@ -218,7 +218,15 @@ export function Dashboard() {
             filteredProjects.map((project) => (
               <button
                 key={project.id}
-                onClick={() => router.push(`/workflow?project=${project.id}`)}
+                onClick={async () => {
+                  // Fetch workflows for this project
+                  const workflows = await workflowService.getAllWorkflows(project.id);
+                  if (workflows.length > 0) {
+                    router.push(`/workflow?project=${project.id}&workflow=${workflows[0].workflow_id}`);
+                  } else {
+                    router.push(`/workflow?project=${project.id}`);
+                  }
+                }}
                 className="dashboard-project-item"
               >
                 <div className="dashboard-project-icon">
@@ -273,7 +281,14 @@ export function Dashboard() {
               typeBadge="ACTION"
               icon={Database}
               headerColorClass="node-header-react"
-              onClick={() => router.push(`/workflow?project=${projects[0].id}`)}
+              onClick={async () => {
+                const workflows = await workflowService.getAllWorkflows(projects[0].id);
+                if (workflows.length > 0) {
+                  router.push(`/workflow?project=${projects[0].id}&workflow=${workflows[0].workflow_id}`);
+                } else {
+                  router.push(`/workflow?project=${projects[0].id}`);
+                }
+              }}
               className="dashboard-action-node cursor-pointer hover:-translate-y-1 transition-transform"
             >
               <div className="flex flex-col h-full justify-between gap-4">

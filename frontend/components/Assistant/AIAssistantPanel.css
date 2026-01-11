@@ -39,6 +39,15 @@
   color: var(--panel-text-color, #000000);
 }
 
+.ai-mode-indicator {
+  font-size: 12px;
+  padding: 4px 8px;
+  background: var(--item-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--panel-text-color);
+}
+
 .quick-actions {
   padding: 12px;
   display: grid;
@@ -205,6 +214,23 @@
   color: var(--panel-text-muted-color);
   text-transform: capitalize;
   font-size: 10px;
+}
+
+.tool-executions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tool-badge {
+  background: var(--color-green);
+  border: 1px solid var(--border-color);
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: var(--node-text-color);
+  font-size: 11px;
+  font-weight: bold;
 }
 
 .typing-indicator {

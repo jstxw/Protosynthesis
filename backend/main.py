@@ -27,6 +27,10 @@ app.register_blueprint(api_v2)
 # Register AI assistant routes
 app.register_blueprint(ai_bp)
 
+# Register Gemini agent routes
+from routes.agent_routes import agent_bp
+app.register_blueprint(agent_bp)
+
 # Initialize MongoDB connection
 try:
     mongodb.connect()

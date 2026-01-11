@@ -491,8 +491,30 @@ export const useStore = create((set, get) => ({
                 // 1. Template format: { id, type, position: { x, y }, data: {...} }
                 // 2. Saved format: { id, x, y, type, name, ... } (flattened)
 
+                console.log('Loading node:', node);
+
                 if (node.position && node.data) {
                     // Template format - already in correct structure
+                    console.log('Template format - data.inputs:', node.data.inputs);
+
+                    // Ensure data has required fields
+                    if (!node.data.inputs || !node.data.outputs) {
+                        console.error('Node missing inputs/outputs:', node);
+                        // Fallback: try to reconstruct from node.data fields
+                        return {
+                            id: node.id,
+                            type: 'custom',
+                            position: node.position,
+                            data: {
+                                ...node.data,
+                                inputs: node.data.inputs || [],
+                                outputs: node.data.outputs || [],
+                                hidden_inputs: node.data.hidden_inputs || [],
+                                hidden_outputs: node.data.hidden_outputs || []
+                            }
+                        };
+                    }
+
                     return {
                         ...node,
                         type: 'custom', // Ensure correct ReactFlow type
@@ -500,6 +522,7 @@ export const useStore = create((set, get) => ({
                 } else {
                     // Saved format - need to reconstruct
                     const { id, x, y, ...nodeData } = node;
+                    console.log('Saved format - nodeData:', nodeData);
                     return {
                         id,
                         type: 'custom',

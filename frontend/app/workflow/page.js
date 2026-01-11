@@ -22,6 +22,7 @@ export default function WorkflowPage() {
   const loadWorkflowFromV2 = useStore((state) => state.loadWorkflowFromV2);
   const setCurrentWorkflow = useStore((state) => state.setCurrentWorkflow);
   const nodes = useStore((state) => state.nodes);
+  const edges = useStore((state) => state.edges);
   const activeBlockId = useStore((state) => state.activeBlockId);
 
   const projectId = searchParams.get('project');
@@ -68,6 +69,10 @@ export default function WorkflowPage() {
         <AIAssistantPanel
           currentNodes={currentNodeTypes}
           selectedNode={activeBlockId}
+          projectId={projectId}
+          workflowId={workflowId}
+          nodes={nodes}
+          edges={edges}
         />
       </div>
     </ReactFlowProvider>

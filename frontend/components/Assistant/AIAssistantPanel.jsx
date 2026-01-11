@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiClient } from "../../services/api";
+import { useStore } from "../../helpers/store";
 import "./AIAssistantPanel.css";
 
-const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
+const AIAssistantPanel = ({ currentNodes, selectedNode, projectId, workflowId, nodes, edges }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentMode, setCurrentMode] = useState("qa"); // "qa" or "agent"
   const messagesEndRef = useRef(null);
+
+  // Get store methods for refreshing workflow
+  const loadWorkflowFromV2 = useStore((state) => state.loadWorkflowFromV2);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -15,6 +20,29 @@ const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Intent detection
+  const detectIntent = (message) => {
+    const actionKeywords = [
+      "create",
+      "add",
+      "connect",
+      "build",
+      "make",
+      "link",
+      "execute",
+      "run",
+      "delete",
+      "remove",
+      "configure",
+      "set up",
+      "modify",
+      "update",
+      "generate",
+    ];
+    const lowerMsg = message.toLowerCase();
+    return actionKeywords.some((kw) => lowerMsg.includes(kw)) ? "agent" : "qa";
+  };
 
   // Quick action buttons
   const quickActions = [
@@ -41,25 +69,80 @@ const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.post("/ai/chat", {
-        message: textToSend,
-        chatHistory: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        workflowContext: {
-          currentNodes: currentNodes || [],
-          selectedNode: selectedNode,
-        },
-      });
+      // Detect intent
+      const intent = detectIntent(textToSend);
+      setCurrentMode(intent);
 
-      const assistantMessage = {
-        role: "assistant",
-        content: response.data.response,
-        sources: response.data.sources,
-      };
+      let response;
+      let assistantMessage;
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (intent === "agent") {
+        // Use Gemini agent for actions
+        if (!projectId || !workflowId) {
+          assistantMessage = {
+            role: "assistant",
+            content:
+              "Please load a project and workflow before using the agent.",
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+          setIsLoading(false);
+          return;
+        }
+
+        response = await apiClient.post("/ai/agent/chat", {
+          message: textToSend,
+          chatHistory: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          workflowContext: {
+            projectId: projectId,
+            workflowId: workflowId,
+            nodes: nodes || [],
+            edges: edges || [],
+          },
+        });
+
+        // Handle agent response
+        assistantMessage = {
+          role: "assistant",
+          content: response.data.message || "Action completed",
+          toolExecutions: response.data.toolExecutions || [],
+          workflowUpdated: response.data.workflowUpdated || false,
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Refresh workflow if updated
+        if (response.data.workflowUpdated) {
+          // Reload workflow data without full page refresh
+          console.log('Workflow updated, reloading data...');
+          if (projectId && workflowId) {
+            await loadWorkflowFromV2(projectId, workflowId);
+          }
+        }
+      } else {
+        // Use MoorchehAI for Q&A
+        response = await apiClient.post("/ai/chat", {
+          message: textToSend,
+          chatHistory: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          workflowContext: {
+            currentNodes: currentNodes || [],
+            selectedNode: selectedNode,
+          },
+        });
+
+        assistantMessage = {
+          role: "assistant",
+          content: response.data.response,
+          sources: response.data.sources,
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       const errorMessage = {
@@ -77,7 +160,7 @@ const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
     sendMessage(action.query);
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -90,6 +173,9 @@ const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
         <div className="header-left">
           <span className="assistant-icon">🤖</span>
           <h3>AI Assistant</h3>
+        </div>
+        <div className="ai-mode-indicator">
+          {currentMode === "qa" ? "💬 Q&A" : "🔧 Agent"}
         </div>
       </div>
 
@@ -127,6 +213,15 @@ const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
             </div>
             <div className="message-content">
               <div className="message-text">{msg.content}</div>
+              {msg.toolExecutions && msg.toolExecutions.length > 0 && (
+                <div className="tool-executions">
+                  {msg.toolExecutions.map((tool, idx) => (
+                    <div key={idx} className="tool-badge">
+                      {tool.result.success ? "✓" : "✗"} {tool.tool}
+                    </div>
+                  ))}
+                </div>
+              )}
               {msg.sources && msg.sources.length > 0 && (
                 <div className="message-sources">
                   <span className="sources-label">Sources:</span>
@@ -161,7 +256,7 @@ const AIAssistantPanel = ({ currentNodes, selectedNode }) => {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           placeholder="Ask me anything about workflows..."
           disabled={isLoading}
           rows="2"
