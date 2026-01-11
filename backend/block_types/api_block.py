@@ -159,11 +159,13 @@ class APIBlock(Block):
         
         # --- Execute Request ---
         try:
-            print(f"API Executing: {self.method.upper()} {url}")
-            print(f"  Params: {params}")
-            print(f"  Headers: {headers}")
-            print(f"  Body: {body}")
-
+            print("\n" + "="*50)
+            print(f"🚀 EXECUTING API BLOCK: {self.name} ({self.schema_key})")
+            print(f"  - METHOD: {self.method.upper()}")
+            print(f"  - URL: {url}")
+            print(f"  - PARAMS: {json.dumps(params, indent=2)}")
+            print(f"  - HEADERS: {json.dumps(headers, indent=2)}")
+            
             kwargs = {
                 "method": self.method.upper(),
                 "url": url,
@@ -175,8 +177,13 @@ class APIBlock(Block):
             if self.method.upper() in ["POST", "PUT", "PATCH"]:
                 if content_type == "application/x-www-form-urlencoded":
                     kwargs["data"] = body
+                    print(f"  - BODY (form-urlencoded): {body}")
                 else:
                     kwargs["json"] = body
+                    print(f"  - BODY (json): {json.dumps(body, indent=2)}")
+            
+            print("="*50 + "\n")
+
 
             response = requests.request(**kwargs)
             self.outputs['status_code'] = response.status_code
