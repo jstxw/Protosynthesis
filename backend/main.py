@@ -14,6 +14,7 @@ from block_types.loop_block import LoopBlock
 from api_schemas import API_SCHEMAS
 # from database import mongodb # Assuming this is used within Project class now
 from api_routes import api_v2
+from ai_routes import ai_bp
 import collections
 import json
 
@@ -23,14 +24,16 @@ CORS(app) # Enable CORS for all routes
 # Register the new authenticated API routes (v2)
 app.register_blueprint(api_v2)
 
-# NOTE: The MongoDB connection should be managed within your database module,
-# not at the top level of your main application file.
-# try:
-#     mongodb.connect()
-#     print("✓ MongoDB connection established")
-# except Exception as e:
-#     print(f"Warning: Failed to connect to MongoDB: {e}")
-#     print("Running in in-memory mode only.")
+# Register AI assistant routes
+app.register_blueprint(ai_bp)
+
+# Initialize MongoDB connection
+try:
+    mongodb.connect()
+    print("✓ MongoDB connection established")
+except Exception as e:
+    print(f"Warning: Failed to connect to MongoDB: {e}")
+    print("Running in in-memory mode only.")
 
 # ==========================================
 # PART 1: API Block Functionality & Execution Engine
@@ -138,7 +141,7 @@ current_project = Project("Demo Project")
 def run_graph():
     """
     Endpoint to trigger graph execution.
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless (e.g., POST /api/v2/projects/<project_id>/execute).
     """
@@ -165,7 +168,7 @@ def run_graph():
 def toggle_visibility():
     """
     Endpoint to toggle visibility of an input or output on a block.
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -192,7 +195,7 @@ def add_block():
     """
     Endpoint to add a new block to the project.
     Expects JSON: { "type": "API", "name": "My Block", "x": 100, "y": 100, ...params }
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless (e.g., POST /api/v2/projects/<project_id>/blocks).
     """
@@ -255,7 +258,7 @@ def remove_block():
     """
     Endpoint to remove a block.
     Expects JSON: { "block_id": "..." }
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -273,7 +276,7 @@ def update_block():
     """
     Endpoint to update block properties (position, name, specific params).
     Expects JSON: { "block_id": "...", "x": 100, "y": 100, "name": "...", ... }
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -331,12 +334,12 @@ def execution_respond():
     data = request.json
     block_id = data.get("block_id")
     value = data.get("value")
-    
+
     block = current_project.blocks.get(block_id)
     if block and isinstance(block, DialogueBlock):
         block.user_response = value
         return jsonify({"status": "received"})
-        
+
     return jsonify({"error": "Block not found or not a dialogue block"}), 404
 
 @app.route('/api/block/update_output_value', methods=['POST'])
@@ -344,7 +347,7 @@ def update_block_output_value():
     """
     Endpoint for the frontend to set the value of an output port.
     Used by interactive blocks like DialogueBlock.
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -352,23 +355,23 @@ def update_block_output_value():
     block_id = data.get("block_id")
     output_key = data.get("output_key")
     value = data.get("value")
-    
+
     block = current_project.blocks.get(block_id)
     if not block:
         return jsonify({"error": "Block not found"}), 404
-        
+
     if output_key not in block.outputs:
         return jsonify({"error": f"Output '{output_key}' not found on block"}), 404
-    
+
     block.outputs[output_key] = value
-    
+
     return jsonify({"status": "updated", "block": block.to_dict()})
 
 @app.route('/api/block/update_input_value', methods=['POST'])
 def update_block_input_value():
     """
     Endpoint for the frontend to set the value of an unconnected input.
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -394,7 +397,7 @@ def add_connection():
     """
     Endpoint to connect two blocks.
     Expects JSON: { "source_id": "...", "source_output": "...", "target_id": "...", "target_input": "..." }
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -423,7 +426,7 @@ def remove_connection():
     """
     Endpoint to remove a connection.
     Expects JSON: { "source_id": "...", "source_output": "...", "target_id": "...", "target_input": "..." }
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless.
     """
@@ -461,7 +464,7 @@ def remove_connection():
 def get_graph_structure():
     """
     Returns the current graph structure for the frontend to render.
-    
+
     NOTE: This endpoint operates on the global project state and should be
     refactored to be stateless (e.g., GET /api/v2/projects/<project_id>/graph).
     """

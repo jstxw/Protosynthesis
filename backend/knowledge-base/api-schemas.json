@@ -1,0 +1,278 @@
+[
+  {
+    "id": "api_anthropic_claude",
+    "text": "Anthropic Claude API for AI text generation. Use this API to generate natural language responses, analyze text, summarize content, answer questions, and create conversational AI experiences. The API requires an x-api-key header for authentication and anthropic-version header. Input includes model selection (claude-3-5-sonnet-20241022 recommended), max_tokens to control output length, and messages array with role (user/assistant) and content. Output includes generated text extracted from content.0.text path and full response JSON. Common use cases: chatbots, content generation, text analysis, code generation, creative writing. Best practice: Set appropriate max_tokens to control costs. Rate limit varies by tier. Use system messages for better control. Handle streaming for real-time responses.",
+    "metadata": {
+      "provider": "anthropic",
+      "category": "ai",
+      "method": "POST",
+      "endpoint": "/v1/messages",
+      "authType": "api_key",
+      "version": "2023-06-01"
+    }
+  },
+  {
+    "id": "api_google_gemini",
+    "text": "Google Gemini API for multimodal AI generation. Powerful API for generating text, analyzing images, and processing multimodal inputs. Requires API key in query parameters. The model parameter in path allows selection (gemini-pro for text, gemini-pro-vision for images). Input uses contents array with parts containing text or inline_data for images. Outputs generated text via candidates.0.content.parts.0.text path. Excellent for: creative writing, code generation, image analysis, question answering, summarization. Best practices: Use gemini-pro for pure text tasks, gemini-pro-vision when analyzing images. Free tier available with rate limits. Include safety settings to control content filtering.",
+    "metadata": {
+      "provider": "google",
+      "category": "ai",
+      "method": "POST",
+      "endpoint": "/v1beta/models/{model}:generateContent",
+      "authType": "api_key",
+      "version": "v1beta"
+    }
+  },
+  {
+    "id": "api_openai_chat",
+    "text": "OpenAI Responses API for conversational AI. Creates AI-generated responses using GPT models. Requires Bearer token authentication. Inputs include model (gpt-4.1 recommended), input text, temperature for randomness control (0-2), top_p for nucleus sampling, max_output_tokens for length limit, and metadata for tracking. Output message_text extracted from output.0.content.0.text path, includes usage statistics and full response. Use cases: chatbots, content creation, code completion, translation, analysis. Best practices: Use temperature 0.7-1.0 for creative tasks, 0-0.3 for deterministic tasks. Monitor usage for cost control. Implement retry logic for rate limits.",
+    "metadata": {
+      "provider": "openai",
+      "category": "ai",
+      "method": "POST",
+      "endpoint": "/v1/responses",
+      "authType": "bearer",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_huggingface_inference",
+    "text": "Hugging Face Inference API for running ML models. Access thousands of pre-trained models for text generation, classification, translation, summarization, and more. Requires model_id in path (e.g., gpt2, bert-base-uncased, distilbert) and Bearer token auth. Input is simple inputs field with text string. Output includes generated_text or model-specific outputs. Use cases: text generation, sentiment analysis, named entity recognition, translation, question answering, summarization. Best practices: Start with smaller models for faster inference. Check model card for specific input/output formats. Free tier available with rate limits. Consider dedicated inference endpoints for production.",
+    "metadata": {
+      "provider": "huggingface",
+      "category": "ai",
+      "method": "POST",
+      "endpoint": "/models/{model_id}",
+      "authType": "bearer",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_stability_ai",
+    "text": "Stability AI image generation API. Create stunning AI-generated images from text prompts using Stable Diffusion models. Requires engine_id in path (stable-diffusion-xl-1024-v1-0 for high quality) and Bearer token. Inputs: text_prompts array with descriptive text, cfg_scale (7-15) for prompt adherence, height/width (512-1024px), samples count, and steps (20-50) for quality. Output returns base64-encoded images via artifacts.0.base64. Use cases: art generation, product mockups, concept visualization, creative projects. Best practices: Detailed prompts yield better results. Higher steps = better quality but slower. Use 1024x1024 for best results. Consider negative prompts to exclude unwanted elements.",
+    "metadata": {
+      "provider": "stability",
+      "category": "ai",
+      "method": "POST",
+      "endpoint": "/v1/generation/{engine_id}/text-to-image",
+      "authType": "bearer",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_elevenlabs_tts",
+    "text": "ElevenLabs text-to-speech API. Convert text to natural-sounding speech using AI voice cloning technology. Requires voice_id in path (21m00Tcm4TlvDq8ikWAM for Rachel voice) and xi-api-key header. Inputs: text to speak, model_id (eleven_monolingual_v1 or eleven_multilingual_v2), voice_settings with stability and similarity_boost controls. Returns audio_base64 and content_type. Use cases: voiceovers, audiobooks, accessibility, virtual assistants, content narration. Best practices: Keep text under 5000 characters per request. Adjust stability (0-1) for consistency vs expressiveness. Use multilingual model for non-English text. Cache frequently used audio.",
+    "metadata": {
+      "provider": "elevenlabs",
+      "category": "ai",
+      "method": "POST",
+      "endpoint": "/v1/text-to-speech/{voice_id}",
+      "authType": "api_key",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_stripe_charge",
+    "text": "Stripe payment processing API. Create charges and process payments securely. Requires Bearer authentication with secret key. Inputs: amount in cents (2000 = $20.00), currency (usd, eur, gbp), source token (tok_visa for testing, or payment method ID), description for record keeping. Outputs: charge id, status (succeeded/failed/pending), and full response. Use cases: e-commerce checkout, subscription billing, invoice payments, donation processing. Best practices: ALWAYS use cents not dollars. Validate amounts before charging. Use idempotency keys to prevent duplicate charges. Never store card details directly. Test with tok_visa in test mode. Implement webhook handlers for async status updates. Include customer metadata for tracking.",
+    "metadata": {
+      "provider": "stripe",
+      "category": "payment",
+      "method": "POST",
+      "endpoint": "/v1/charges",
+      "authType": "bearer",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_paypal_payment",
+    "text": "PayPal order creation API. Create payment orders for PayPal checkout flow. Requires OAuth2 Bearer token. Inputs: intent (CAPTURE for immediate payment or AUTHORIZE for later capture), purchase_units array with amount object containing currency_code and value. Returns order id, status, and approval links. Use cases: e-commerce, marketplace payments, international transactions, buyer protection scenarios. Best practices: Use CAPTURE intent for digital goods. Include item details in purchase_units for transparency. Implement return_url and cancel_url for redirect flows. Verify webhooks with certificate validation. Store order_id for refund processing.",
+    "metadata": {
+      "provider": "paypal",
+      "category": "payment",
+      "method": "POST",
+      "endpoint": "/v2/checkout/orders",
+      "authType": "bearer",
+      "version": "v2"
+    }
+  },
+  {
+    "id": "api_exchange_rates",
+    "text": "Open Exchange Rates API for currency conversion. Get latest exchange rates for global currencies relative to a base currency. Requires app_id parameter. Inputs: app_id for authentication, base currency code (default USD). Returns rates object with all currency pairs, base currency, and timestamp. Use cases: e-commerce multi-currency, expense tracking, financial dashboards, currency converters. Best practices: Cache rates for 1 hour to reduce API calls. Base currency defaults to USD but can be changed on paid plans. Free tier updates hourly. Use historical endpoint for past dates. Multiply amount by rate to convert.",
+    "metadata": {
+      "provider": "openexchangerates",
+      "category": "finance",
+      "method": "GET",
+      "endpoint": "/api/latest.json",
+      "authType": "api_key",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_slack_webhook",
+    "text": "Slack incoming webhook for posting messages. Simple way to send messages to Slack channels without complex OAuth. Webhook URL includes path with T-id, B-id, and secret token. Inputs: text message (markdown supported), optional blocks array for rich formatting. Returns status. Use cases: notifications, alerts, CI/CD updates, monitoring, team updates. Best practices: Keep messages concise and actionable. Use blocks for better formatting with buttons, images, sections. Escape special characters in text. Rate limit is 1 message per second. Don't expose webhook URL publicly. Use @channel mentions sparingly.",
+    "metadata": {
+      "provider": "slack",
+      "category": "communication",
+      "method": "POST",
+      "endpoint": "/services/{webhook_path}",
+      "authType": "webhook",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_discord_webhook",
+    "text": "Discord webhook for sending messages to channels. Post messages and embeds to Discord without bot setup. Webhook URL is the full endpoint. Inputs: content (message text up to 2000 chars), username to override display name, embeds array for rich cards with title, description, color, fields. Returns status. Use cases: game notifications, community updates, bot alternative, monitoring alerts. Best practices: Use embeds for structured data. Color codes are decimal (not hex). Limit 10 embeds per message. Include thumbnail/image URLs for visual appeal. Rate limit: 5 requests per 2 seconds per webhook.",
+    "metadata": {
+      "provider": "discord",
+      "category": "communication",
+      "method": "POST",
+      "endpoint": "/api/webhooks/{webhook_id}/{token}",
+      "authType": "webhook",
+      "version": "v10"
+    }
+  },
+  {
+    "id": "api_telegram_bot",
+    "text": "Telegram Bot API for sending messages. Send text messages through your Telegram bot. Requires bot token in path (get from @BotFather). Inputs: chat_id (user or group ID), text message (up to 4096 chars), parse_mode (Markdown, HTML, or none) for formatting. Returns message_id and result object. Use cases: notifications, chatbots, alerts, group messages. Best practices: Get chat_id from getUpdates endpoint first. Use Markdown for basic formatting. Escape special characters based on parse_mode. Support both private and group chats. Implement command handlers. Rate limit: 30 messages per second.",
+    "metadata": {
+      "provider": "telegram",
+      "category": "communication",
+      "method": "POST",
+      "endpoint": "/bot{bot_token}/sendMessage",
+      "authType": "path_token",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_twilio_sms",
+    "text": "Twilio SMS sending API. Send text messages globally via Twilio. Requires AccountSid in path and Basic auth (base64 of SID:TOKEN). Inputs: To (recipient phone +1...), From (your Twilio number), Body (message text up to 1600 chars). Returns message sid and status. Use cases: OTP verification, notifications, alerts, reminders, two-way messaging. Best practices: Include country code in phone numbers. Check phone number format. Monitor delivery status via webhooks. Segment long messages automatically. Verify numbers before sending. Respect opt-out requests. Test with Twilio test credentials first.",
+    "metadata": {
+      "provider": "twilio",
+      "category": "communication",
+      "method": "POST",
+      "endpoint": "/2010-04-01/Accounts/{AccountSid}/Messages.json",
+      "authType": "basic",
+      "version": "2010-04-01"
+    }
+  },
+  {
+    "id": "api_notion_page",
+    "text": "Notion API for creating pages. Add new pages to Notion databases or as child pages. Requires Bearer integration token and Notion-Version header (2022-06-28). Inputs: parent object with database_id or page_id, properties object matching database schema (title, text, select, etc). Returns page id, URL, and full response. Use cases: knowledge base management, CRM, project tracking, documentation, content management. Best practices: Create integration in Notion settings first. Share database with integration. Match property types exactly. Use rich_text format for text fields. Include icon and cover for visual appeal.",
+    "metadata": {
+      "provider": "notion",
+      "category": "productivity",
+      "method": "POST",
+      "endpoint": "/v1/pages",
+      "authType": "bearer",
+      "version": "2022-06-28"
+    }
+  },
+  {
+    "id": "api_google_sheets",
+    "text": "Google Sheets API for appending data. Add rows to spreadsheets programmatically. Requires spreadsheet_id and range in path, API key in params. Inputs: valueInputOption (USER_ENTERED parses formulas, RAW for literal), values 2D array of cell data. Returns updates object with row count and spreadsheetId. Use cases: data logging, form responses, analytics tracking, report generation. Best practices: Use A1 notation for ranges (Sheet1!A1). Values are row-major arrays. USER_ENTERED interprets formulas and formats. Batch updates are more efficient than individual appends. Set up OAuth for user-specific access.",
+    "metadata": {
+      "provider": "google",
+      "category": "productivity",
+      "method": "POST",
+      "endpoint": "/v4/spreadsheets/{spreadsheet_id}/values/{range}:append",
+      "authType": "api_key",
+      "version": "v4"
+    }
+  },
+  {
+    "id": "api_google_calendar",
+    "text": "Google Calendar API for event creation. Add events to Google Calendar. Requires calendar_id in path (use 'primary' for main calendar), API key in params, and Bearer token in headers. Inputs: summary (event title), start and end objects with dateTime (ISO 8601 format). Returns event id and htmlLink to view. Use cases: meeting scheduling, reminders, appointment booking, event management. Best practices: Use ISO 8601 format with timezone (YYYY-MM-DDTHH:MM:SS-07:00). Include location and description for clarity. Set attendees array for invitations. Use recurrence rules for repeating events. Check for conflicts before creating.",
+    "metadata": {
+      "provider": "google",
+      "category": "productivity",
+      "method": "POST",
+      "endpoint": "/calendar/v3/calendars/{calendar_id}/events",
+      "authType": "bearer",
+      "version": "v3"
+    }
+  },
+  {
+    "id": "api_todoist",
+    "text": "Todoist task creation API. Add tasks to Todoist project management. Requires Bearer API token. Inputs: content (task description), optional project_id, priority (1-4 where 4 is highest). Returns task id, content, and full response. Use cases: task management, productivity tracking, project planning, GTD workflows. Best practices: Default priority is 1 (normal). Use project_id to organize tasks. Add due_date in natural language ('tomorrow', 'next monday'). Include labels for categorization. Sync after bulk operations.",
+    "metadata": {
+      "provider": "todoist",
+      "category": "productivity",
+      "method": "POST",
+      "endpoint": "/rest/v2/tasks",
+      "authType": "bearer",
+      "version": "v2"
+    }
+  },
+  {
+    "id": "api_airtable_list",
+    "text": "Airtable records retrieval API. List and filter records from Airtable bases. Requires base_id and table_name in path, Bearer token for auth. Optional params: filterByFormula, maxRecords, sort, view. Returns records array with id and fields. Use cases: database querying, CRM data, inventory management, content management. Best practices: URL encode table names with spaces. Use filterByFormula for server-side filtering. Paginate with offset for large datasets. Cache results when possible. Consider view parameter for pre-filtered data.",
+    "metadata": {
+      "provider": "airtable",
+      "category": "database",
+      "method": "GET",
+      "endpoint": "/v0/{base_id}/{table_name}",
+      "authType": "bearer",
+      "version": "v0"
+    }
+  },
+  {
+    "id": "api_mongodb_find",
+    "text": "MongoDB Atlas Data API for finding documents. Query MongoDB collections via REST API. Requires app_id in path and api-key header. Inputs: dataSource (cluster name), database name, collection name, filter object (MongoDB query). Returns matched document. Use cases: database queries, data retrieval, backend APIs, serverless functions. Best practices: Limit query complexity for performance. Use projection to return specific fields only. Index frequently queried fields. Enable Data API in Atlas first. Use findMany for multiple results. Secure api-key properly.",
+    "metadata": {
+      "provider": "mongodb",
+      "category": "database",
+      "method": "POST",
+      "endpoint": "/app/{app_id}/endpoint/data/v1/action/findOne",
+      "authType": "api_key",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_google_maps_geocode",
+    "text": "Google Maps Geocoding API. Convert addresses to geographic coordinates and vice versa. Requires address in params and API key. Returns results array with formatted_address, geometry.location (lat/lng), place_id, and status. Use cases: location search, address validation, map markers, delivery routing. Best practices: URL encode addresses. Check status for success. Use place_id for consistent references. Enable billing for production. Cache frequent lookups. Handle ZERO_RESULTS gracefully.",
+    "metadata": {
+      "provider": "google",
+      "category": "location",
+      "method": "GET",
+      "endpoint": "/maps/api/geocode/json",
+      "authType": "api_key",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_cat_fact",
+    "text": "Cat Fact API for random cat facts. Simple public API returning interesting facts about cats. No authentication required. No inputs needed. Returns fact (string) and length (number). Use cases: testing workflows, placeholder content, fun facts, API learning. Best practices: No rate limits documented but be respectful. Great for testing node connections. Use for demo workflows. Facts are educational and entertaining.",
+    "metadata": {
+      "provider": "catfact",
+      "category": "fun",
+      "method": "GET",
+      "endpoint": "/fact",
+      "authType": "none",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_agify",
+    "text": "Agify.io name age prediction API. Predicts age based on first name using demographic data. No auth required. Input name in query params. Returns age (predicted), count (data points), name. Use cases: demographic analysis, user profiling, data enrichment, fun experiments. Best practices: Predictions are statistical averages. Accuracy varies by name popularity. Combine with similar APIs (genderize, nationalize). Free tier allows 1000 requests per day.",
+    "metadata": {
+      "provider": "agify",
+      "category": "fun",
+      "method": "GET",
+      "endpoint": "/",
+      "authType": "none",
+      "version": "v1"
+    }
+  },
+  {
+    "id": "api_custom",
+    "text": "Custom API node for any HTTP endpoint. Generic node supporting GET/POST/PUT/DELETE to any URL. Inputs: url (full endpoint), params (query parameters as JSON), body (request body as JSON), headers (custom headers as JSON). Returns response_json and status_code. Use cases: calling unlisted APIs, testing endpoints, prototyping integrations, webhook testing. Best practices: Test with simple GET first. Validate JSON format for params/body/headers. Check API documentation for correct method. Use tools like Postman to test endpoints first. Handle authentication via headers.",
+    "metadata": {
+      "provider": "custom",
+      "category": "utility",
+      "method": "ANY",
+      "endpoint": "user-defined",
+      "authType": "flexible",
+      "version": "v1"
+    }
+  }
+]

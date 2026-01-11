@@ -483,12 +483,28 @@ export const useStore = create((set, get) => ({
             const workflow = response.data;
 
             // Convert workflow data to ReactFlow format
-            const flowNodes = (workflow.data?.nodes || []).map(node => ({
-                id: node.id,
-                type: 'custom',
-                position: { x: node.x || 0, y: node.y || 0 },
-                data: node,
-            }));
+            const flowNodes = (workflow.data?.nodes || []).map(node => {
+                // Handle both formats:
+                // 1. Template format: { id, type, position: { x, y }, data: {...} }
+                // 2. Saved format: { id, x, y, type, name, ... } (flattened)
+
+                if (node.position && node.data) {
+                    // Template format - already in correct structure
+                    return {
+                        ...node,
+                        type: 'custom', // Ensure correct ReactFlow type
+                    };
+                } else {
+                    // Saved format - need to reconstruct
+                    const { id, x, y, ...nodeData } = node;
+                    return {
+                        id,
+                        type: 'custom',
+                        position: { x: x || 0, y: y || 0 },
+                        data: nodeData,
+                    };
+                }
+            });
 
             const flowEdges = workflow.data?.edges || [];
 
@@ -499,7 +515,7 @@ export const useStore = create((set, get) => ({
                 currentWorkflowId: workflowId
             });
 
-            console.log('✅ Workflow loaded successfully');
+            console.log('✅ Workflow loaded successfully:', { nodes: flowNodes.length, edges: flowEdges.length });
         } catch (error) {
             console.error("Failed to load workflow:", error);
             // Initialize with empty workflow if load fails

@@ -18,6 +18,8 @@ const FlowCanvas = () => {
         toggleMenu,
         addBlock,
         setHoveredNodeId,
+        currentProjectId,
+        currentWorkflowId,
         onSelectionChange
     } = useStore();
     const {screenToFlowPosition} = useReactFlow();
@@ -25,10 +27,14 @@ const FlowCanvas = () => {
     const nodeTypes = useMemo(() => ({custom: CustomNode}), []);
 
     // Fetch the initial graph state and schemas when the component mounts
+    // IMPORTANT: Only fetch from old API if NOT using v2 workflows
     useEffect(() => {
-        fetchGraph();
+        if (!currentProjectId && !currentWorkflowId) {
+            // Only use legacy fetchGraph if not in v2 mode
+            fetchGraph();
+        }
         fetchApiSchemas();
-    }, [fetchGraph, fetchApiSchemas]);
+    }, [fetchGraph, fetchApiSchemas, currentProjectId, currentWorkflowId]);
 
     const handleNodeContextMenu = useCallback((event, node) => {
         event.preventDefault();
