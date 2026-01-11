@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response, stream_with_context
 from flask_cors import CORS
 from blocks import Block
 from project import Project
@@ -22,8 +22,8 @@ CORS(app) # Enable CORS for all routes
 
 def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
     """
-    Discovers reachable nodes from start_blocks and executes the resulting subgraph
-    in a sequential, topological order.
+    Generator that discovers reachable nodes and executes them, yielding
+    progress events as JSON strings.
     """
     # 1. Discovery: Find all blocks reachable from the start_blocks using BFS.
     reachable_blocks = set()
@@ -55,47 +55,52 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
     # 3. Execution (Topological Sort on the subgraph)
     ready_queue = collections.deque([b_id for b_id, degree in in_degree.items() if degree == 0])
     
-    results = {}
-    execution_order = []
 
     while ready_queue:
         current_block_id = ready_queue.popleft()
         current_block = block_map[current_block_id]
-        execution_order.append(current_block.id)
         
         # Fetch inputs from upstream blocks
         current_block.fetch_inputs()
+        
+        # Yield start event for immediate highlighting
+        yield json.dumps({
+            "type": "start",
+            "block_id": current_block.id
+        }) + "\n"
         
         # Execute the block
         try:
             print(f"Executing {current_block.name}...")
             current_block.execute()
             print(f"Result ({current_block.name}): {current_block.outputs}")
-            # Store results after successful execution
-            results[current_block.id] = {
+            
+            # Yield success event
+            yield json.dumps({
+                "type": "progress",
+                "block_id": current_block.id,
                 "name": current_block.name,
-                "type": current_block.block_type,
+                "block_type": current_block.block_type,
                 "outputs": current_block.outputs
-            }
+            }) + "\n"
+            
         except Exception as e:
             print(f"!!! Execution of block '{current_block.name}' failed: {e}")
-            # Store error information in the results
-            results[current_block.id] = {
+            # Yield error event
+            yield json.dumps({
+                "type": "error",
+                "block_id": current_block.id,
                 "name": current_block.name,
-                "type": current_block.block_type,
-                "outputs": {"error": f"Execution failed: {e}"}
-            }
+                "error": str(e)
+            }) + "\n"
 
         # Propagate to neighbors
         for neighbor_id in graph[current_block_id]:
             in_degree[neighbor_id] -= 1
             if in_degree[neighbor_id] == 0:
                 ready_queue.append(neighbor_id)
-                
-    return {
-        "execution_order": execution_order,
-        "block_results": results
-    }
+    
+    yield json.dumps({"type": "complete"}) + "\n"
 
 # ==========================================
 # PART 2: Flask Linking to React Frontend
@@ -122,14 +127,11 @@ def run_graph():
     if not start_nodes:
         return jsonify({"error": "Execution failed: No 'Start' block found in the project. Add a Start block to define an entry point."}), 400
 
-    try:
-        # Pass the start nodes and the full map of all blocks in the project
-        results = execute_graph(start_nodes, current_project.blocks)
-        return jsonify(results)
-    except Exception as e:
-        # Log the full exception for easier debugging on the server
-        print(f"Error during graph execution: {e}")
-        return jsonify({"error": str(e)}), 500
+    # Return a streaming response
+    return Response(
+        stream_with_context(execute_graph(start_nodes, current_project.blocks)),
+        mimetype='application/x-ndjson'
+    )
 
 @app.route('/api/block/toggle_visibility', methods=['POST'])
 def toggle_visibility():

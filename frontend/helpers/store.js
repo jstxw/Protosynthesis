@@ -14,6 +14,8 @@ export const useStore = create((set, get) => ({
     edges: [],
     executionResult: null,
     apiSchemas: {},
+    activeBlockId: null,
+    executionLogs: [],
 
     // --- DATA FETCHING ---
     fetchApiSchemas: async () => {
@@ -226,12 +228,71 @@ export const useStore = create((set, get) => ({
 
     // --- EXECUTION ---
     executeGraph: async () => {
+        set({ executionLogs: ["Starting execution..."], activeBlockId: null, executionResult: null });
+
         try {
-            const response = await axios.post(`${API_URL}/execute`);
-            set({executionResult: JSON.stringify(response.data, null, 2)});
+            const response = await fetch(`${API_URL}/execute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const event = JSON.parse(line);
+                        
+                        if (event.type === 'start') {
+                            set({ activeBlockId: event.block_id });
+                        } else if (event.type === 'progress') {
+                            set(state => ({
+                                executionLogs: [...(state.executionLogs || []), `Executed ${event.name} (${event.block_type})`]
+                            }));
+
+                            // Update node outputs in real-time
+                            set(state => ({
+                                nodes: state.nodes.map(node => {
+                                    if (node.id === event.block_id) {
+                                        const newOutputs = node.data.outputs.map(out => ({
+                                            ...out,
+                                            value: event.outputs[out.key]
+                                        }));
+                                        return { ...node, data: { ...node.data, outputs: newOutputs } };
+                                    }
+                                    return node;
+                                })
+                            }));
+                        } else if (event.type === 'error') {
+                            set(state => ({
+                                executionLogs: [...(state.executionLogs || []), `Error in ${event.name}: ${event.error}`]
+                            }));
+                        } else if (event.type === 'complete') {
+                            set(state => ({
+                                activeBlockId: null,
+                                executionLogs: [...(state.executionLogs || []), "Execution complete."]
+                            }));
+                        }
+                    } catch (e) {
+                        console.error("Error parsing stream line:", e);
+                    }
+                }
+            }
         } catch (error) {
             console.error("Failed to execute graph:", error);
-            set({executionResult: `Error: ${error.response?.data?.error || error.message}`});
+            set(state => ({ 
+                executionLogs: [...(state.executionLogs || []), `Error: ${error.message}`] 
+            }));
         }
     },
 

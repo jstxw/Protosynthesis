@@ -3,7 +3,7 @@ import { Handle, Position } from 'reactflow';
 import { useStore } from '../helpers/store';
 
 const CustomNode = ({ data }) => {
-  const { updateNode, updateInputValue, edges, togglePortVisibility, apiSchemas, removeBlock } = useStore();
+  const { updateNode, updateInputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId } = useStore();
 
   const handleNameChange = (e) => {
     updateNode(data.id, { name: e.target.value });
@@ -120,8 +120,10 @@ const CustomNode = ({ data }) => {
     );
   };
 
+  const isActive = activeBlockId === data.id;
+
   return (
-    <div className="custom-node">
+    <div className={`custom-node ${isActive ? 'active-block' : ''}`}>
       <div className="node-header">
         <input 
           type="text" 
