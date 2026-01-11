@@ -13,7 +13,10 @@ const createFlowNode = (blockData) => ({
     id: blockData.id,
     type: 'custom',
     position: { x: blockData.x, y: blockData.y },
-    data: { ...blockData, type: blockData.block_type },
+    data: {
+        ...blockData,
+        type: blockData.type || blockData.block_type // Ensure type is always present
+    },
     connectable: !blockData.is_collapsed,
     draggable: true, style: blockData.is_collapsed ? { width: '50px', height: '50px' } : {},
 });

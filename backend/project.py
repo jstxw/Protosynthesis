@@ -106,7 +106,11 @@ class Project:
         id_map = {} # old_id -> new_block_instance (if we want to preserve IDs, we can)
         
         for block_data in data["blocks"]:
-            b_type = block_data["block_type"]
+            # Support both block_type (backend) and type (frontend/legacy) keys
+            b_type = block_data.get("block_type") or block_data.get("type")
+            if not b_type:
+                continue # Skip invalid blocks
+
             name = block_data["name"]
             x = block_data.get("x", 0.0)
             y = block_data.get("y", 0.0)
@@ -256,3 +260,74 @@ class Project:
         result = projects_collection.delete_one({"_id": ObjectId(self._id)})
 
         return result.deleted_count > 0
+
+    def create_block(self, block_type: str, name: str, x: float, y: float, **kwargs) -> Optional[Block]:
+        """Factory method to create and add a block to the project."""
+        new_block = None
+        if block_type == "API":
+            schema_key = kwargs.get("schema_key", "custom")
+            new_block = APIBlock(name, schema_key, x=x, y=y)
+            if schema_key == "custom":
+                if "url" in kwargs: new_block.url = kwargs["url"]
+                if "method" in kwargs: new_block.method = kwargs["method"]
+        elif block_type == "LOGIC":
+            operation = kwargs.get("operation", "add")
+            new_block = LogicBlock(name, operation, x=x, y=y)
+        elif block_type == "REACT":
+            jsx_code = kwargs.get("jsx_code", "export default function MyComponent({ data_in, onWorkflowOutputChange }) {\n  return <div>Input: {JSON.stringify(data_in)}</div>;\n}")
+            css_code = kwargs.get("css_code", "/* CSS for your component */\ndiv {\n  padding: 10px;\n  border-radius: 5px;\n  background-color: #f0f0f0;\n}")
+            new_block = ReactBlock(name, jsx_code=jsx_code, css_code=css_code, x=x, y=y)
+        elif block_type == "TRANSFORM":
+            t_type = kwargs.get("transformation_type", "to_string")
+            fields = kwargs.get("fields", "")
+            new_block = TransformBlock(name, t_type, fields=fields, x=x, y=y)
+        elif block_type == "STRING_BUILDER":
+            template = kwargs.get("template", "")
+            new_block = StringBuilderBlock(name, template, x=x, y=y)
+        elif block_type == "START":
+            new_block = StartBlock(name, x=x, y=y)
+        elif block_type == "WAIT":
+            delay = kwargs.get("delay", 1.0)
+            new_block = WaitBlock(name, delay=delay, x=x, y=y)
+        elif block_type == "DIALOGUE":
+            message = kwargs.get("message", "")
+            new_block = DialogueBlock(name, message=message, x=x, y=y)
+        elif block_type == "LOOP":
+            new_block = LoopBlock(name, x=x, y=y)
+
+        if new_block:
+            self.add_block(new_block)
+
+        return new_block
+
+    def update_block(self, block_id: str, **kwargs) -> Optional[Block]:
+        """Updates properties of a block in the project."""
+        block = self.blocks.get(block_id)
+        if not block:
+            return None
+
+        if "x" in kwargs:
+            block.x = kwargs["x"]
+        if "y" in kwargs:
+            block.y = kwargs["y"]
+        if "name" in kwargs:
+            block.name = kwargs["name"]
+
+        if isinstance(block, APIBlock):
+            if "schema_key" in kwargs: block.apply_schema(kwargs["schema_key"])
+            if "url" in kwargs: block.url = kwargs["url"]
+            if "method" in kwargs: block.method = kwargs["method"]
+        elif isinstance(block, ReactBlock):
+            if "jsx_code" in kwargs: block.jsx_code = kwargs["jsx_code"]
+            if "css_code" in kwargs: block.css_code = kwargs["css_code"]
+        elif isinstance(block, LogicBlock):
+            if "operation" in kwargs: block.operation = kwargs["operation"]
+        elif isinstance(block, TransformBlock):
+            if "transformation_type" in kwargs: block.transformation_type = kwargs["transformation_type"]
+            if "fields" in kwargs: block.fields = kwargs["fields"]
+        elif isinstance(block, StringBuilderBlock):
+            if "template" in kwargs: block.template = kwargs["template"]
+        elif isinstance(block, WaitBlock):
+            if "delay" in kwargs: block.delay = float(kwargs["delay"])
+
+        return block

@@ -1,13 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '../helpers/store';
+import { workflowService } from '../services/projects';
 import Image from 'next/image';
 
 const ControlPanel = () => {
   const router = useRouter();
-  const { addBlock, apiSchemas, executeGraph, saveProject, loadProject } = useStore();
+  const { addBlock, apiSchemas, executeGraph, saveProject, loadProject, currentProjectId, currentWorkflowId } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [workflows, setWorkflows] = useState([]);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (currentProjectId) {
+      workflowService.getAllWorkflows(currentProjectId)
+        .then(setWorkflows)
+        .catch(console.error);
+    }
+  }, [currentProjectId]);
 
   const onDragStart = (event, blockData) => {
     const dataString = JSON.stringify(blockData);
@@ -75,6 +85,30 @@ const ControlPanel = () => {
           <Image src="/play.svg" alt="Run" width={20} height={20} />
         </button>
       </div>
+
+      {currentProjectId && (
+        <div className="controls-section">
+          <h4>Workflows</h4>
+          <div className="block-list">
+            {workflows.map(wf => (
+              <div
+                key={wf.workflow_id}
+                className={`block-list-item ${currentWorkflowId === wf.workflow_id ? 'active' : ''}`}
+                onClick={() => router.push(`/workflow?project=${currentProjectId}&workflow=${wf.workflow_id}`)}
+                title={wf.name}
+              >
+                <Image src="/branch.svg" alt="Workflow" width={18} height={18} className="block-list-item-icon" />
+                <div className="block-list-item-content">
+                  <div className="block-list-item-name">{wf.name}</div>
+                  <div className="block-list-item-desc">
+                    {new Date(wf.updated_at || wf.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="controls-section">
         <h4>Logic Blocks</h4>

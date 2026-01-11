@@ -135,6 +135,7 @@ class Block(ABC):
             "id": self.id,
             "name": self.name,
             "block_type": self.block_type,
+            "type": self.block_type,  # Frontend expects "type" for coloring
             "x": self.x,
             "y": self.y,
             "inputs": [
