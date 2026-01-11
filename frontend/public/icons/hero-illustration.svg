@@ -1,0 +1,36 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Abstract API Connection Illustration -->
+  <rect width="600" height="600" fill="#0A0A0A"/>
+  
+  <!-- Grid background -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="1" fill="#3A3A3A" opacity="0.5"/>
+  </pattern>
+  <rect width="600" height="600" fill="url(#grid)"/>
+  
+  <!-- Large logo -->
+  <g transform="translate(200, 150)">
+    <path d="M100 250L150 100L200 250" stroke="#3B82F6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+    <path d="M125 175H175" stroke="#3B82F6" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+  </g>
+  
+  <!-- Connected nodes -->
+  <circle cx="150" cy="300" r="30" fill="#2A2A2A" stroke="#3B82F6" stroke-width="3"/>
+  <circle cx="300" cy="200" r="30" fill="#2A2A2A" stroke="#10B981" stroke-width="3"/>
+  <circle cx="450" cy="300" r="30" fill="#2A2A2A" stroke="#8B5CF6" stroke-width="3"/>
+  <circle cx="300" cy="400" r="30" fill="#2A2A2A" stroke="#F97316" stroke-width="3"/>
+  
+  <!-- Connection lines -->
+  <path d="M150 300 L300 200" stroke="#3B82F6" stroke-width="2" stroke-dasharray="8 8" opacity="0.5"/>
+  <path d="M300 200 L450 300" stroke="#10B981" stroke-width="2" stroke-dasharray="8 8" opacity="0.5"/>
+  <path d="M450 300 L300 400" stroke="#8B5CF6" stroke-width="2" stroke-dasharray="8 8" opacity="0.5"/>
+  <path d="M300 400 L150 300" stroke="#F97316" stroke-width="2" stroke-dasharray="8 8" opacity="0.5"/>
+  
+  <!-- Animated flow particles -->
+  <circle cx="225" cy="250" r="4" fill="#3B82F6" opacity="0.8">
+    <animateMotion dur="3s" repeatCount="indefinite" path="M0,0 L75,-50"/>
+  </circle>
+  <circle cx="375" cy="250" r="4" fill="#10B981" opacity="0.8">
+    <animateMotion dur="3s" repeatCount="indefinite" path="M0,0 L75,50"/>
+  </circle>
+</svg>

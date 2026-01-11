@@ -1,15 +1,18 @@
 import 'reactflow/dist/style.css';
 import './globals.css';
+import { Providers } from '@/components/Providers';
 
 export const metadata = {
-  title: 'Flow Builder',
-  description: 'A visual programming interface',
+  title: 'NodeLink - API Workflow Builder',
+  description: 'Build API workflows visually with authentication',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

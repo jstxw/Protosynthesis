@@ -1,9 +1,13 @@
+'use client';
+
 import React, { useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStore } from '../helpers/store';
 import Image from 'next/image';
 
 const TopBar = () => {
   const { executeGraph, saveProject, loadProject } = useStore();
+  const router = useRouter();
   const fileInputRef = useRef(null);
 
   const handleLoadClick = () => {
@@ -29,6 +33,13 @@ const TopBar = () => {
 
   return (
     <header className="top-bar">
+      <button
+        onClick={() => router.push('/dashboard')}
+        className="btn-secondary"
+        style={{ marginRight: 'auto' }}
+      >
+        ← Dashboard
+      </button>
       <div className="top-bar-buttons">
         <button onClick={saveProject} title="Save Project">
           <Image src="/save.svg" alt="Save" width={20} height={20} />
