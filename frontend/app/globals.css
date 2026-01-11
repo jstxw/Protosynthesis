@@ -108,12 +108,17 @@ a {
 
 /* Custom Node Styles from your CustomNode.js */
 .react-flow__node-custom {
+  /* We move visual styles to .custom-node to handle outlines better */
+  padding: 0;
+}
+
+.custom-node {
   background: var(--node-bg-color);
   border: 1px solid var(--border-color);
   border-radius: 5px;
-  padding: 0;
   font-size: 12px;
   min-width: 250px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .node-header {
@@ -409,4 +414,16 @@ a {
   align-items: center;
   gap: 5px;
   margin-bottom: 4px;
+}
+
+/* Active Block Highlight (Execution) */
+.active-block {
+  box-shadow: 0 0 0 4px var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Hover Outline Effect */
+.custom-node:hover {
+  box-shadow: 0 0 0 4px var(--primary-color);
+  border-color: var(--primary-color);
 }

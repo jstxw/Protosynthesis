@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { useStore } from '../lib/store';
+import { useStore } from '../helpers/store';
 
 const CustomNode = ({ data }) => {
   const { updateNode, updateInputValue, edges, togglePortVisibility, apiSchemas, removeBlock } = useStore();
@@ -23,6 +23,10 @@ const CustomNode = ({ data }) => {
 
   const handleFieldsChange = (e) => {
     updateNode(data.id, { fields: e.target.value });
+  };
+
+  const handleDelayChange = (e) => {
+    updateNode(data.id, { delay: e.target.value });
   };
 
   // The menu component, rendered conditionally
@@ -213,6 +217,19 @@ const CustomNode = ({ data }) => {
               <option value="and">AND</option>
               <option value="or">OR</option>
             </select>
+          </div>
+        )}
+
+        {data.type === 'WAIT' && (
+          <div className="node-config">
+            <label>Delay (seconds)</label>
+            <input 
+              type="number"
+              className="nodrag"
+              defaultValue={data.delay}
+              onBlur={handleDelayChange}
+              style={{ width: '100%' }}
+            />
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ from block_types.react_block import ReactBlock
 from block_types.transform_block import TransformBlock
 from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
+from block_types.wait_block import WaitBlock
 from api_schemas import API_SCHEMAS
 import collections
 import json
@@ -191,6 +192,9 @@ def add_block():
             new_block = StringBuilderBlock(name, template, x=x, y=y)
         elif block_type == "START":
             new_block = StartBlock(name, x=x, y=y)
+        elif block_type == "WAIT":
+            delay = data.get("delay", 1.0)
+            new_block = WaitBlock(name, delay=delay, x=x, y=y)
         else:
             return jsonify({"error": f"Unknown block type: {block_type}"}), 400
             
@@ -258,6 +262,9 @@ def update_block():
     elif isinstance(block, StringBuilderBlock):
         if "template" in data:
             block.template = data["template"]
+    elif isinstance(block, WaitBlock):
+        if "delay" in data:
+            block.delay = float(data["delay"])
             
     return jsonify({"status": "updated", "block": block.to_dict()})
 

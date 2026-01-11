@@ -9,6 +9,7 @@ from block_types.react_block import ReactBlock
 from block_types.transform_block import TransformBlock
 from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
+from block_types.wait_block import WaitBlock
 
 class Project:
     """
@@ -67,6 +68,8 @@ class Project:
                 block_data["fields"] = block.fields
             elif isinstance(block, StringBuilderBlock):
                 block_data["template"] = block.template
+            elif isinstance(block, WaitBlock):
+                block_data["delay"] = block.delay
             
             data["blocks"].append(block_data)
 
@@ -120,6 +123,8 @@ class Project:
                 block = StringBuilderBlock(name, block_data.get("template", ""), x=x, y=y)
             elif b_type == "START":
                 block = StartBlock(name, x=x, y=y)
+            elif b_type == "WAIT":
+                block = WaitBlock(name, delay=block_data.get("delay", 1.0), x=x, y=y)
             
             if block:
                 # Restore base properties

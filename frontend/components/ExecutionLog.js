@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useStore } from '../lib/store';
+import { useStore } from '../helpers/store';
 
 const ExecutionLog = () => {
   const { executionLogs } = useStore();

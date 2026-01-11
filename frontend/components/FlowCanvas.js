@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
 import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useStore } from '../lib/store';
+import { useStore } from '../helpers/store';
 import CustomNode from './CustomNode';
 
 const FlowCanvas = () => {

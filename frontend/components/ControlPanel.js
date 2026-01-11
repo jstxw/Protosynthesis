@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useStore } from '../lib/store';
+import { useStore } from '../helpers/store';
 import Image from 'next/image';
 
 const ControlPanel = () => {
@@ -18,6 +18,7 @@ const ControlPanel = () => {
     { type: 'STRING_BUILDER', name: 'String Builder', description: 'Formats text with variables.', icon: '/text.svg' },
     { type: 'LOGIC', name: 'Logic', description: 'Performs conditional logic.', icon: '/branch.svg' },
     { type: 'TRANSFORM', name: 'Transform', description: 'Modifies data formats.', icon: '/shuffle.svg' },
+    { type: 'WAIT', name: 'Wait', description: 'Pauses execution.', icon: '/clock.svg' },
   ];
 
   const filteredApiSchemas = Object.entries(apiSchemas)

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useStore } from '../lib/store';
+import { useStore } from '../helpers/store';
 import Image from 'next/image';
 
 const TopBar = () => {
