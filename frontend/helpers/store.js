@@ -38,6 +38,24 @@ export const useStore = create((set, get) => ({
     currentProjectId: null,
     currentWorkflowId: null,
     autoSaveTimer: null,
+    
+    // --- THEME & EDITOR ---
+    editorTheme: {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+            { token: 'comment', foreground: '6A9955' },
+            { token: 'keyword', foreground: 'C586C0' },
+            { token: 'identifier', foreground: '9CDCFE' },
+            { token: 'string', foreground: 'CE9178' },
+            { token: 'delimiter', foreground: 'D4D4D4' },
+        ],
+        colors: {
+            'editor.background': '#1E1E1E',
+            'editor.foreground': '#D4D4D4',
+            'editor.lineHighlightBackground': '#2F3337',
+        }
+    },
 
     // --- DATA FETCHING ---
     fetchApiSchemas: async () => {
@@ -56,6 +74,12 @@ export const useStore = create((set, get) => ({
 
             const flowNodes = nodes.map(createFlowNode);
             set({nodes: flowNodes, edges});
+            
+            // Auto-select React node if present
+            const reactNode = flowNodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
+            if (reactNode) {
+                set({ selectedNodeId: reactNode.id });
+            }
         } catch (error) {
             console.error("Failed to fetch graph:", error);
         }
@@ -186,6 +210,7 @@ export const useStore = create((set, get) => ({
 
                 const flowNode = createFlowNode(initializedBlock);
                 set(state => ({nodes: [...state.nodes, flowNode]}));
+                get().selectNode(flowNode.id);
                 get().scheduleAutoSave();
              } catch (error) {
                  console.error("Failed to init block via backend:", error);
@@ -207,6 +232,7 @@ export const useStore = create((set, get) => ({
             const flowNode = createFlowNode(newNodeData);
             set(state => ({nodes: [...state.nodes, flowNode]}));
             // Trigger auto-save for v2 workflows (if applicable, though we are in legacy block)
+            get().selectNode(flowNode.id);
             get().scheduleAutoSave();
         } catch (error) {
             console.error("Failed to add block:", error);
@@ -368,7 +394,7 @@ export const useStore = create((set, get) => ({
             } else {
                 // Otherwise, consider hovered and selected nodes
                 if (state.hoveredNodeId) hotNodeIds.add(state.hoveredNodeId);
-                state.selectedNodeIds.forEach(id => hotNodeIds.add(id));
+                // state.selectedNodeIds.forEach(id => hotNodeIds.add(id));
             }
 
             const newEdges = state.edges.map(edge => {
@@ -390,6 +416,16 @@ export const useStore = create((set, get) => ({
 
     onSelectionChange: ({ nodes: selectedNodes }) => {
         const selectedIds = (selectedNodes || []).map(n => n.id);
+        
+        // Editor Logic: Always point to React Node if it exists
+        const reactNode = get().nodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
+        let editorTargetId = null;
+        if (reactNode) {
+            editorTargetId = reactNode.id;
+        } else {
+            editorTargetId = selectedIds.length === 1 ? selectedIds[0] : null;
+        }
+        
         const activeId = selectedIds.length === 1 ? selectedIds[0] : null;
 
         // Update node.selected flags so other parts of the UI (and ReactFlow) stay consistent
@@ -400,45 +436,41 @@ export const useStore = create((set, get) => ({
                 return { ...n, selected: shouldBeSelected };
             }),
             selectedNodeIds: selectedIds,
-            activeBlockId: activeId, // Sync active block ID
-            selectedNodeId: activeId // Sync selectedNodeId for ReactIDE
+            activeBlockId: state.isExecuting ? state.activeBlockId : activeId, 
+            selectedNodeId: editorTargetId // Sync selectedNodeId for ReactIDE (forced to React Node if present)
         }));
     },
 
     // Programmatically select nodes. If `additive` is true, toggle/add to existing selection
     selectNode: (nodeId, additive = false) => {
         set(state => {
-            if (!nodeId) {
-                // clear selection
-                return {
-                    nodes: state.nodes.map(n => ({ ...n, selected: false })),
-                    selectedNodeIds: [],
-                    selectedNodeId: null,
-                    activeBlockId: null
-                };
-            }
+            let newSelectedIds;
 
             if (additive) {
                 // Toggle selection of the clicked node while preserving others
                 const currentlySelected = state.selectedNodeIds.includes(nodeId);
-                const newSelectedIds = currentlySelected
+                newSelectedIds = currentlySelected
                     ? state.selectedNodeIds.filter(id => id !== nodeId)
                     : [...state.selectedNodeIds, nodeId];
-
-                return {
-                    nodes: state.nodes.map(n => ({ ...n, selected: newSelectedIds.includes(n.id) })),
-                    selectedNodeIds: newSelectedIds,
-                    selectedNodeId: newSelectedIds.length === 1 ? newSelectedIds[0] : null,
-                    activeBlockId: newSelectedIds.length === 1 ? newSelectedIds[0] : null
-                };
+            } else {
+                // Default: single selection or clear
+                newSelectedIds = nodeId ? [nodeId] : [];
             }
 
-            // Default: single selection
+            // Editor Logic: Always point to React Node if it exists
+            const reactNode = state.nodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
+            let editorTargetId = null;
+            if (reactNode) {
+                editorTargetId = reactNode.id;
+            } else {
+                editorTargetId = newSelectedIds.length === 1 ? newSelectedIds[0] : null;
+            }
+
             return {
-                nodes: state.nodes.map(n => ({ ...n, selected: n.id === nodeId })),
-                selectedNodeIds: [nodeId],
-                selectedNodeId: nodeId,
-                activeBlockId: nodeId
+                nodes: state.nodes.map(n => ({ ...n, selected: newSelectedIds.includes(n.id) })),
+                selectedNodeIds: newSelectedIds,
+                selectedNodeId: editorTargetId,
+                activeBlockId: state.isExecuting ? state.activeBlockId : (newSelectedIds.length === 1 ? newSelectedIds[0] : null)
             };
         });
     },
@@ -640,6 +672,12 @@ export const useStore = create((set, get) => ({
             });
 
             console.log('✅ Workflow loaded successfully:', { nodes: flowNodes.length, edges: flowEdges.length });
+            
+            // Auto-select React node if present
+            const reactNode = flowNodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
+            if (reactNode) {
+                set({ selectedNodeId: reactNode.id });
+            }
         } catch (error) {
             console.error("Failed to load workflow:", error);
             // Initialize with empty workflow if load fails
@@ -697,4 +735,3 @@ export const useStore = create((set, get) => ({
         set({ autoSaveTimer: timer });
     },
 }));
-

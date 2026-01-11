@@ -13,7 +13,7 @@ from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
 from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
-from block_types.loop_block import LoopBlock
+from block_types.api_key_block import ApiKeyBlock
 
 class Project:
     """
@@ -144,8 +144,8 @@ class Project:
                 block = WaitBlock(name, delay=block_data.get("delay", 1.0), x=x, y=y)
             elif b_type == "DIALOGUE":
                 block = DialogueBlock(name, x=x, y=y)
-            elif b_type == "LOOP":
-                block = LoopBlock(name, x=x, y=y)
+            elif b_type == "API_KEY":
+                block = ApiKeyBlock(name, x=x, y=y)
             
             if block:
                 # Restore base properties
@@ -292,8 +292,8 @@ class Project:
         elif block_type == "DIALOGUE":
             message = kwargs.get("message", "")
             new_block = DialogueBlock(name, message=message, x=x, y=y)
-        elif block_type == "LOOP":
-            new_block = LoopBlock(name, x=x, y=y)
+        elif block_type == "API_KEY":
+            new_block = ApiKeyBlock(name, x=x, y=y)
 
         if new_block:
             self.add_block(new_block)

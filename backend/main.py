@@ -10,7 +10,7 @@ from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
 from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
-from block_types.loop_block import LoopBlock
+from block_types.api_key_block import ApiKeyBlock
 from api_schemas import API_SCHEMAS
 from database import mongodb # Assuming this is used within Project class now
 from api_routes import api_v2
@@ -239,8 +239,8 @@ def add_block():
         elif block_type == "DIALOGUE":
             message = data.get("message", "")
             new_block = DialogueBlock(name, message=message, x=x, y=y)
-        elif block_type == "LOOP":
-            new_block = LoopBlock(name, x=x, y=y)
+        elif block_type == "API_KEY":
+            new_block = ApiKeyBlock(name, x=x, y=y)
         else:
             return jsonify({"error": f"Unknown block type: {block_type}"}), 400
             
@@ -269,7 +269,8 @@ def remove_block():
         current_project.remove_block(block_id)
         return jsonify({"status": "removed", "block_id": block_id})
     else:
-        return jsonify({"error": "Block not found"}), 404
+        # Return 200 even if not found to ensure idempotency and prevent frontend errors
+        return jsonify({"status": "removed", "block_id": block_id}), 200
 
 @app.route('/api/block/update', methods=['POST'])
 def update_block():
@@ -308,6 +309,8 @@ def update_block():
             block.jsx_code = data["jsx_code"]
         if "css_code" in data:
             block.css_code = data["css_code"]
+        if "inputs" in data and "outputs" in data:
+            block.update_ports(data["inputs"], data["outputs"])
     elif isinstance(block, LogicBlock):
         if "operation" in data:
             block.operation = data["operation"]
@@ -322,6 +325,9 @@ def update_block():
     elif isinstance(block, WaitBlock):
         if "delay" in data:
             block.delay = float(data["delay"])
+    elif isinstance(block, ApiKeyBlock):
+        if "selected_key" in data:
+            block.selected_key = data["selected_key"]
             
     return jsonify({"status": "updated", "block": block.to_dict()})
 

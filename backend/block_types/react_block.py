@@ -20,6 +20,41 @@ class ReactBlock(Block):
         # For now, we do noting during server side execution.
         pass
 
+    def update_ports(self, inputs_list, outputs_list):
+        """
+        Synchronizes the block's inputs and outputs with the lists provided by the frontend.
+        Preserves existing values/connections where possible.
+        """
+        # --- Sync Inputs ---
+        new_input_keys = set(item['key'] for item in inputs_list)
+        current_input_keys = set(self.inputs.keys())
+
+        # Remove deleted inputs
+        for key in current_input_keys - new_input_keys:
+            del self.inputs[key]
+            if key in self.input_meta: del self.input_meta[key]
+            if key in self.input_connectors: del self.input_connectors[key]
+
+        # Add/Update inputs
+        for item in inputs_list:
+            key = item['key']
+            if key not in self.inputs:
+                self.register_input(key, data_type=item.get('data_type', 'any'))
+
+        # --- Sync Outputs ---
+        new_output_keys = set(item['key'] for item in outputs_list)
+        current_output_keys = set(self.outputs.keys())
+
+        for key in current_output_keys - new_output_keys:
+            del self.outputs[key]
+            if key in self.output_meta: del self.output_meta[key]
+            if key in self.output_connectors: del self.output_connectors[key]
+
+        for item in outputs_list:
+            key = item['key']
+            if key not in self.outputs:
+                self.register_output(key, data_type=item.get('data_type', 'any'))
+
     def to_dict(self):
         data = super().to_dict()
         data["jsx_code"] = self.jsx_code

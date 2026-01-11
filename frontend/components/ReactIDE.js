@@ -1,11 +1,12 @@
-import React, {useState, useEffect, useRef} from 'react';
-import Editor from '@monaco-editor/react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
+import Editor, { useMonaco } from '@monaco-editor/react';
 import {useStore} from '../helpers/store';
 
 const ReactIDE = () => {
     const nodes = useStore((state) => state.nodes);
     const selectedNodeId = useStore((state) => state.selectedNodeId);
     const updateNode = useStore((state) => state.updateNode);
+    const editorTheme = useStore((state) => state.editorTheme);
     const updateOutputValue = useStore((state) => state.updateOutputValue);
     const executeGraph = useStore((state) => state.executeGraph);
     const edges = useStore((state) => state.edges);
@@ -15,6 +16,14 @@ const ReactIDE = () => {
     const [activeTab, setActiveTab] = useState('jsx'); // 'jsx' or 'css'
     const iframeRef = useRef(null);
     const [iframeReady, setIframeReady] = useState(false);
+    const monaco = useMonaco();
+
+    useEffect(() => {
+        if (monaco && editorTheme) {
+            monaco.editor.defineTheme('flow-theme', editorTheme);
+            monaco.editor.setTheme('flow-theme');
+        }
+    }, [monaco, editorTheme]);
 
     const selectedNode = nodes.find(n => n.id === selectedNodeId);
     const isReactNode = selectedNode?.type === 'REACT';
@@ -47,14 +56,14 @@ const ReactIDE = () => {
     }, [nodes, edges, selectedNodeId, isReactNode, selectedNode]);
 
     useEffect(() => {
-        if (isReactNode) {
+        if (isReactNode && selectedNode) {
             setJsx(selectedNode.data.jsx_code || '');
             setCss(selectedNode.data.css_code || '');
         } else {
             setJsx('');
             setCss('');
         }
-    }, [selectedNodeId, isReactNode, selectedNode?.data.jsx_code, selectedNode?.data.css_code]);
+    }, [selectedNodeId, isReactNode]); // Only re-sync when switching nodes to prevent typing loops
 
     // Listen for sandbox ready messages so we don't post before iframe is initialized
     useEffect(() => {
@@ -82,6 +91,61 @@ const ReactIDE = () => {
             updateNode(selectedNodeId, {css_code: value});
         }
     };
+
+    // --- PARSING LOGIC ---
+    // Parse the JSX code to find props and update the node's inputs/outputs
+    const parseAndSyncPorts = useCallback((code) => {
+        if (!selectedNodeId || !isReactNode) return;
+
+        // Regex to find the props destructuring pattern in:
+        // 1. export default function Name({ prop1, prop2 }) ...
+        // 2. const Name = ({ prop1, prop2 }) => ...
+        const functionRegex = /export\s+default\s+function\s+\w*\s*\(\s*\{\s*([^}]+)\s*\}\s*\)/;
+        const arrowRegex = /(?:const|let|var)\s+\w+\s*=\s*\(\s*\{\s*([^}]+)\s*\}\s*\)\s*=>/;
+
+        const match = code.match(functionRegex) || code.match(arrowRegex);
+
+        if (match && match[1]) {
+            // Extract prop names
+            const props = match[1]
+                .split(',')
+                .map(p => p.trim().split('=')[0].split(':')[0].trim()) // Handle defaults (=) and renaming (:)
+                .filter(p => p && !p.startsWith('//') && !p.startsWith('/*'));
+
+            const newInputs = [];
+            const newOutputs = [];
+
+            props.forEach(prop => {
+                if (prop === 'onWorkflowOutputChange') return; // Ignore system prop
+
+                // Convention: Props starting with 'on' followed by uppercase are Outputs (Events)
+                if (prop.startsWith('on') && prop.length > 2 && prop[2] === prop[2].toUpperCase()) {
+                    newOutputs.push({ key: prop, data_type: 'any' });
+                } else {
+                    newInputs.push({ key: prop, data_type: 'any' });
+                }
+            });
+
+            // Compare with current ports to avoid unnecessary updates
+            const currentInputs = selectedNode?.data?.inputs || [];
+            const currentOutputs = selectedNode?.data?.outputs || [];
+
+            const inputsChanged = JSON.stringify(newInputs.map(i=>i.key).sort()) !== JSON.stringify(currentInputs.map(i=>i.key).sort());
+            const outputsChanged = JSON.stringify(newOutputs.map(o=>o.key).sort()) !== JSON.stringify(currentOutputs.map(o=>o.key).sort());
+
+            if (inputsChanged || outputsChanged) {
+                updateNode(selectedNodeId, { inputs: newInputs, outputs: newOutputs });
+            }
+        }
+    }, [selectedNodeId, isReactNode, selectedNode, updateNode]);
+
+    // Debounce the parsing so it doesn't run on every keystroke
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            parseAndSyncPorts(jsx);
+        }, 1000); // 1 second debounce
+        return () => clearTimeout(timer);
+    }, [jsx, parseAndSyncPorts]);
 
     // --- PREVIEW / SANDBOX LOGIC ---
     // Send code and props to the sandbox iframe
@@ -159,7 +223,7 @@ const ReactIDE = () => {
                     <Editor
                         height="100%"
                         defaultLanguage="javascript"
-                        theme="vs-dark"
+                        theme="flow-theme"
                         value={jsx}
                         onChange={handleJsxChange}
                         options={{
@@ -173,7 +237,7 @@ const ReactIDE = () => {
                     <Editor
                         height="100%"
                         defaultLanguage="css"
-                        theme="vs-dark"
+                        theme="flow-theme"
                         value={css}
                         onChange={handleCssChange}
                         options={{

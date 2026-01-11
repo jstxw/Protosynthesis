@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useMemo, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
 import { useStore } from '../helpers/store';
 import Image from 'next/image';
@@ -13,8 +13,8 @@ const getIconForType = (type) => {
     case 'STRING_BUILDER': return '/text.svg';
     case 'LOGIC': return '/branch.svg';
     case 'TRANSFORM': return '/shuffle.svg';
+    case 'API_KEY': return '/key.svg';
     case 'WAIT': return '/clock.svg';
-    case 'LOOP': return '/loop.svg';
     case 'API': return '/window.svg';
     case 'DIALOGUE': return '/chat.svg';
     default: return null;
@@ -33,6 +33,15 @@ const CustomNode = ({ data }) => {
   const activeBlockId = useStore((s) => s.activeBlockId);
   const [name, setName] = useState(data.name || '');
 
+    // Determine the single React I/O port key to always point the editor at.
+  // Priority: any port with "react" in the key (case-insensitive), otherwise first available port.
+  const reactIOKey = useMemo(() => {
+    if (data.type !== 'REACT') return null;
+    const allPorts = [ ...(data.inputs || []), ...(data.outputs || []) ];
+    const found = allPorts.find(p => /react/i.test(p.key));
+    return found?.key || allPorts[0]?.key || null;
+  }, [data.type, data.inputs, data.outputs]);
+
   // --- Local handlers moved here to avoid recreating selectors ---
   const handleNameBlur = (e) => updateNode(data.id, { name: e.target.value });
   const handleTemplateChange = (e) => updateNode(data.id, { template: e.target.value });
@@ -40,6 +49,7 @@ const CustomNode = ({ data }) => {
   const handleLogicOperationChange = (e) => updateNode(data.id, { operation: e.target.value });
   const handleFieldsChange = (e) => updateNode(data.id, { fields: e.target.value });
   const handleDelayChange = (e) => updateNode(data.id, { delay: e.target.value });
+  const handleApiKeySelectChange = (e) => updateNode(data.id, { selected_key: e.target.value });
 
   const getHeaderClass = () => {
     switch (data.type) {
@@ -49,8 +59,8 @@ const CustomNode = ({ data }) => {
       case 'STRING_BUILDER': return 'node-header-string';
       case 'LOGIC': return 'node-header-logic';
       case 'TRANSFORM': return 'node-header-transform';
+      case 'API_KEY': return 'node-header-logic';
       case 'WAIT': return 'node-header-wait';
-      case 'LOOP': return 'node-header-logic';
       case 'DIALOGUE': return 'node-header-dialogue';
       default: return '';
     }
@@ -141,10 +151,10 @@ const CustomNode = ({ data }) => {
             <input
               type="text"
               className="nodrag" // Prevents node dragging when interacting with the input
-              defaultValue={
+              value={
                 typeof port.value === 'object' && port.value !== null
                   ? JSON.stringify(port.value)
-                  : port.value || ''
+                  : port.value ?? ''
               }
               onChange={(e) => updateInputValue(data.id, port.key, e.target.value)}
               placeholder="Manual Input"
@@ -297,6 +307,22 @@ const CustomNode = ({ data }) => {
           </div>
         )}
 
+        {data.type === 'API_KEY' && (
+          <div className="node-config">
+            <label>Select Key from .env</label>
+            <select
+              className="nodrag"
+              value={data.selected_key || ''}
+              onChange={handleApiKeySelectChange}
+              style={{ width: '100%' }}
+            >
+              <option value="">-- Select a Key --</option>
+              {(data.available_keys || []).map(keyName => (
+                <option key={keyName} value={keyName}>{keyName}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {data.menu_open && <SettingsMenu />}

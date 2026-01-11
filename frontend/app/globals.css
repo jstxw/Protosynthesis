@@ -100,6 +100,21 @@ input, textarea, select, button {
     z-index: 10;
 }
 
+.react-ide-empty {
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+
+}
+
+.react-ide-panel {
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+
+}
+
+.react-ide-container {
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+
+}
+
 .controls-section:last-child {
     flex-grow: 1;
     display: flex;
@@ -180,9 +195,9 @@ input, textarea, select, button {
     position: relative;
 }
 
-.custom-node:hover, .active-block {
-    transform: translateY(-6px); /* Hover raise effect */
-}
+/*.custom-node:hover, .active-block {*/
+/*    transform: translateY(-6px); !* Hover raise effect *!*/
+/*}*/
 
 .node-header {
     background: var(--surface-color);
@@ -767,8 +782,9 @@ input, textarea, select, button {
     border-left: 1px solid var(--border-color);
 }
 
-/* Hover Outline Effect */
-.custom-node:hover::before, .active-block::before {
+/* Hover Outline Effect & Active Execution Effect */
+.custom-node:hover::before,
+.active-block::before {
     content: '';
     position: absolute;
     top: -6px;
@@ -831,4 +847,3 @@ input, textarea, select, button {
     filter: brightness(0.4); /* Make icon darker for contrast */
     font-size: 20px;
 }
-

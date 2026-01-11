@@ -109,27 +109,30 @@ API_SCHEMAS = {
             "records": {"type": "json"}
         }
     },
-    "twilio_sms": {
-        "name": "Twilio Send SMS",
+     "twilio_send_sms": {
+        "name": "Twilio: Send SMS",
+        "doc_url": "https://www.twilio.com/docs/sms/api/message-resource",
         "url": "https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json",
         "method": "POST",
-        "doc_url": "https://www.twilio.com/docs/sms/api/message-resource",
+        "content_type": "application/x-www-form-urlencoded",
         "inputs": {
             "path": {
-                "AccountSid": {"type": "string", "default": "AC..."}
+                "AccountSid": {"type": "string", "default": ""}
             },
             "headers": {
-                "Authorization": {"type": "string", "default": "Basic base64(SID:TOKEN)"}
+                "Authorization": {"type": "string", "default": "Basic <Base64 Credentials>"}
             },
             "body": {
-                "To": {"type": "string", "default": "+1..."},
-                "From": {"type": "string", "default": "+1..."},
-                "Body": {"type": "string", "default": "Hello from Flow Builder"}
+                "To": {"type": "string", "default": "+1"},
+                "From": {"type": "string", "default": "+1"},
+                "Body": {"type": "string", "default": "Hello from Flow"}
             }
         },
         "outputs": {
-            "sid": {"type": "string"},
-            "status": {"type": "string"}
+            "sid": {"type": "string", "path": "sid"},
+            "status": {"type": "string", "path": "status"},
+            "error_code": {"type": "string", "path": "error_code"},
+            "error_message": {"type": "string", "path": "error_message"}
         }
     },
     "mongodb_find": {
@@ -376,7 +379,7 @@ API_SCHEMAS = {
         }
     },
     "exchange_rates": {
-        "name": "Open Exchange Rates",
+        "name": "Exchange Rates",
         "url": "https://openexchangerates.org/api/latest.json",
         "method": "GET",
         "doc_url": "https://docs.openexchangerates.org/",

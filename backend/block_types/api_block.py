@@ -102,6 +102,7 @@ class APIBlock(Block):
             return
 
         schema = API_SCHEMAS.get(self.schema_key, API_SCHEMAS["custom"])
+        content_type = schema.get("content_type", "application/json")
         
         # --- Determine URL, Params, Body, Headers ---
         url = self.url
@@ -144,20 +145,26 @@ class APIBlock(Block):
         
         # --- Execute Request ---
         try:
-            json_payload = body if self.method.upper() in ["POST", "PUT", "PATCH"] else None
             print(f"API Executing: {self.method.upper()} {url}")
             print(f"  Params: {params}")
             print(f"  Headers: {headers}")
-            print(f"  JSON Body: {json_payload}")
+            print(f"  Body: {body}")
 
-            response = requests.request(
-                method=self.method.upper(),
-                url=url,
-                params=params,
-                json=json_payload,
-                headers=headers,
-                timeout=10
-            )
+            kwargs = {
+                "method": self.method.upper(),
+                "url": url,
+                "params": params,
+                "headers": headers,
+                "timeout": 10
+            }
+
+            if self.method.upper() in ["POST", "PUT", "PATCH"]:
+                if content_type == "application/x-www-form-urlencoded":
+                    kwargs["data"] = body
+                else:
+                    kwargs["json"] = body
+
+            response = requests.request(**kwargs)
             self.outputs['status_code'] = response.status_code
             response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
 
