@@ -53,3 +53,96 @@ def get_projects(current_user):
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Failed to list projects: {str(e)}"}), 500
+
+@api_v2.route('/projects/<project_id>/workflows', methods=['POST'])
+@require_auth
+def create_workflow(current_user, project_id):
+    """Creates a new workflow within a project."""
+    try:
+        user_id = current_user.get('sub')
+        data = request.json
+        workflow_name = data.get("name", "New Workflow")
+
+        from user_service import UserService
+        workflow = UserService.create_workflow(user_id, project_id, workflow_name)
+
+        return jsonify({
+            "status": "created",
+            "workflow_id": workflow.get('workflow_id'),
+            "workflow": workflow
+        }), 201
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 404
+    except Exception as e:
+        logger.error(f"Error creating workflow: {e}", exc_info=True)
+        return jsonify({"error": "Failed to create workflow"}), 500
+
+@api_v2.route('/projects/<project_id>/workflows', methods=['GET'])
+@require_auth
+def list_workflows(current_user, project_id):
+    """Lists all workflows in a project."""
+    try:
+        user_id = current_user.get('sub')
+        from user_service import UserService
+        workflows = UserService.get_all_workflows(user_id, project_id)
+        return jsonify(workflows), 200
+    except Exception as e:
+        logger.error(f"Error listing workflows: {e}", exc_info=True)
+        return jsonify({"error": "Failed to list workflows"}), 500
+
+@api_v2.route('/projects/<project_id>/workflows/<workflow_id>', methods=['GET'])
+@require_auth
+def get_workflow(current_user, project_id, workflow_id):
+    """Gets a specific workflow."""
+    try:
+        user_id = current_user.get('sub')
+        from user_service import UserService
+        workflow = UserService.get_workflow(user_id, project_id, workflow_id)
+
+        if not workflow:
+            return jsonify({"error": "Workflow not found"}), 404
+
+        return jsonify(workflow), 200
+    except Exception as e:
+        logger.error(f"Error getting workflow: {e}", exc_info=True)
+        return jsonify({"error": "Failed to get workflow"}), 500
+
+@api_v2.route('/projects/<project_id>/workflows/<workflow_id>', methods=['PUT'])
+@require_auth
+def update_workflow(current_user, project_id, workflow_id):
+    """Updates a workflow's data (nodes, edges)."""
+    try:
+        user_id = current_user.get('sub')
+        data = request.json
+        workflow_data = data.get("data") # Expects { nodes: [], edges: [] }
+
+        if workflow_data is None:
+             return jsonify({"error": "Missing 'data' field"}), 400
+
+        from user_service import UserService
+        success = UserService.update_workflow(user_id, project_id, workflow_id, workflow_data)
+
+        if success:
+            return jsonify({"status": "updated"}), 200
+        else:
+            return jsonify({"error": "Workflow not found or update failed"}), 404
+    except Exception as e:
+        logger.error(f"Error updating workflow: {e}", exc_info=True)
+        return jsonify({"error": "Failed to update workflow"}), 500
+
+@api_v2.route('/projects/<project_id>/workflows/<workflow_id>', methods=['DELETE'])
+@require_auth
+def delete_workflow(current_user, project_id, workflow_id):
+    """Deletes a workflow."""
+    try:
+        user_id = current_user.get('sub')
+        from user_service import UserService
+        success = UserService.delete_workflow(user_id, project_id, workflow_id)
+
+        if success:
+            return jsonify({"status": "deleted"}), 200
+        else:
+            return jsonify({"error": "Workflow not found"}), 404
+    except Exception as e:
+        logger.error(f"Error deleting workflow: {e}", exc_info=True)
+        return jsonify({"error": "Failed to delete workflow"}), 500

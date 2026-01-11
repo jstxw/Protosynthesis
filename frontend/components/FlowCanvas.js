@@ -20,7 +20,8 @@ const FlowCanvas = () => {
         setHoveredNodeId,
         currentProjectId,
         currentWorkflowId,
-        onSelectionChange
+        onSelectionChange,
+        selectNode
     } = useStore();
     const {screenToFlowPosition} = useReactFlow();
     // Define our custom node type
@@ -40,6 +41,13 @@ const FlowCanvas = () => {
         event.preventDefault();
         toggleMenu(node.id);
     }, [toggleMenu]);
+
+    const handleNodeClick = useCallback((event, node) => {
+        // If user clicks on node, update selection in our store.
+        // Support additive selection with ctrl/meta/shift key.
+        const additive = event.ctrlKey || event.metaKey || event.shiftKey;
+        selectNode(node.id, additive);
+    }, [selectNode]);
 
     const onDragOver = useCallback((event) => {
         event.preventDefault();
@@ -76,9 +84,11 @@ const FlowCanvas = () => {
             onConnect={onConnect}
             nodeTypes={nodeTypes}
             onNodeContextMenu={handleNodeContextMenu}
+            onNodeClick={handleNodeClick}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onSelectionChange={onSelectionChange}
+            onPaneClick={() => selectNode(null)}
             onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
             onNodeMouseLeave={() => setHoveredNodeId(null)}
             connectionLineType="straight"

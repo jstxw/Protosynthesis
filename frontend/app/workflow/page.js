@@ -8,6 +8,7 @@ import ControlPanel from '@/components/ControlPanel';
 import dynamic from 'next/dynamic';
 import ExecutionLog from '@/components/ExecutionLog';
 import AIAssistantPanel from '@/components/Assistant/AIAssistantPanel';
+import ReactIDE from '@/components/ReactIDE'; // Import new ReactIDE
 import { useStore } from '@/helpers/store';
 
 // Dynamically import client-only components to prevent SSR hydration errors.
@@ -23,6 +24,7 @@ export default function WorkflowPage() {
   const setCurrentWorkflow = useStore((state) => state.setCurrentWorkflow);
   const nodes = useStore((state) => state.nodes);
   const activeBlockId = useStore((state) => state.activeBlockId);
+  const selectedNodeId = useStore((state) => state.selectedNodeId || state.activeBlockId);
 
   const projectId = searchParams.get('project');
   const workflowId = searchParams.get('workflow');
@@ -65,10 +67,19 @@ export default function WorkflowPage() {
           </main>
           <ExecutionLog />
         </div>
-        <AIAssistantPanel
-          currentNodes={currentNodeTypes}
-          selectedNode={activeBlockId}
-        />
+        {/* Right side panel for React IDE */}
+        <div style={{ width: '400px', height: '100vh', borderLeft: '1px solid var(--border-color)', background: 'var(--surface-color)', position: 'relative' }}>
+            <ReactIDE />
+        </div>
+
+        {/* Adjusted AI Assistant to be top-right but over the IDE or next to it?
+            User said "mini react ide on the right side ... ai assistant confined to top right"
+            Ideally AI sits on top.
+        */}
+        {/*<AIAssistantPanel*/}
+        {/*  currentNodes={currentNodeTypes}*/}
+        {/*  selectedNode={activeBlockId}*/}
+        {/*/>*/}
       </div>
     </ReactFlowProvider>
   );

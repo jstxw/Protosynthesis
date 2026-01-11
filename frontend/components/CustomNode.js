@@ -1,8 +1,10 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
+import React, { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import { useStore } from '../helpers/store';
 import Image from 'next/image';
-import Editor from '@monaco-editor/react';
+
+// NOTE: avoid returning a fresh object from a selector (causes snapshot caching warnings)
+// Use individual `useStore` selectors below in the component to prevent re-renders/infinite loops.
 
 const getIconForType = (type) => {
   switch (type) {
@@ -19,42 +21,25 @@ const getIconForType = (type) => {
   }
 };
 
+
 const CustomNode = ({ data }) => {
-  const { updateNode, updateInputValue, updateOutputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId, executeGraph } = useStore();
+  // Select only the pieces needed individually to avoid selector snapshot caching issues
+  const updateNode = useStore((s) => s.updateNode);
+  const updateInputValue = useStore((s) => s.updateInputValue);
+  const togglePortVisibility = useStore((s) => s.togglePortVisibility);
+  const apiSchemas = useStore((s) => s.apiSchemas);
+  const removeBlock = useStore((s) => s.removeBlock);
+  const edges = useStore((s) => s.edges);
+  const activeBlockId = useStore((s) => s.activeBlockId);
   const [name, setName] = useState(data.name || '');
 
-  // State for React IDE
-  const [jsx, setJsx] = useState(data.jsx_code || '');
-  const [css, setCss] = useState(data.css_code || '');
-  const iframeRef = useRef(null);
-
-  useEffect(() => {
-    setName(data.name || '');
-  }, [data.name]);
-
-  const handleNameBlur = (e) => {
-    updateNode(data.id, { name: e.target.value });
-  };
-
-  const handleTemplateChange = (e) => {
-    updateNode(data.id, { template: e.target.value });
-  };
-
-  const handleTransformTypeChange = (e) => {
-    updateNode(data.id, { transformation_type: e.target.value });
-  };
-
-  const handleLogicOperationChange = (e) => {
-    updateNode(data.id, { operation: e.target.value });
-  };
-
-  const handleFieldsChange = (e) => {
-    updateNode(data.id, { fields: e.target.value });
-  };
-
-  const handleDelayChange = (e) => {
-    updateNode(data.id, { delay: e.target.value });
-  };
+  // --- Local handlers moved here to avoid recreating selectors ---
+  const handleNameBlur = (e) => updateNode(data.id, { name: e.target.value });
+  const handleTemplateChange = (e) => updateNode(data.id, { template: e.target.value });
+  const handleTransformTypeChange = (e) => updateNode(data.id, { transformation_type: e.target.value });
+  const handleLogicOperationChange = (e) => updateNode(data.id, { operation: e.target.value });
+  const handleFieldsChange = (e) => updateNode(data.id, { fields: e.target.value });
+  const handleDelayChange = (e) => updateNode(data.id, { delay: e.target.value });
 
   const getHeaderClass = () => {
     switch (data.type) {
@@ -65,78 +50,11 @@ const CustomNode = ({ data }) => {
       case 'LOGIC': return 'node-header-logic';
       case 'TRANSFORM': return 'node-header-transform';
       case 'WAIT': return 'node-header-wait';
-      case 'LOOP': return 'node-header-logic'; // Reuse logic color
+      case 'LOOP': return 'node-header-logic';
       case 'DIALOGUE': return 'node-header-dialogue';
       default: return '';
     }
   };
-
-  // --- EFFECTS FOR REACT IDE ---
-
-  // Effect to send code to iframe when it's ready or code changes
-  useEffect(() => {
-    if (data.type !== 'REACT') return;
-
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    const handleSandboxReady = (event) => {
-        if (event.data.type === 'SANDBOX_READY') {
-            iframe.contentWindow.postMessage({
-                type: 'RENDER_COMPONENT',
-                payload: {
-                    jsx: jsx,
-                    css: css,
-                    props: data.inputs.reduce((acc, input) => {
-                        acc[input.key] = input.value;
-                        return acc;
-                    }, {})
-                }
-            }, '*');
-        }
-    };
-    
-    window.addEventListener('message', handleSandboxReady);
-
-    return () => window.removeEventListener('message', handleSandboxReady);
-  }, [iframeRef.current, jsx, css]); // Rerun if code changes
-
-  // Effect to send updated props (from workflow) to iframe
-  useEffect(() => {
-    if (data.type !== 'REACT') return;
-
-    const iframe = iframeRef.current;
-    if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({
-            type: 'RENDER_COMPONENT', // Re-rendering with new props is the simplest way
-            payload: {
-                jsx: jsx,
-                css: css,
-                props: data.inputs.reduce((acc, input) => {
-                    acc[input.key] = input.value;
-                    return acc;
-                }, {})
-            }
-        }, '*');
-    }
-  }, [data.inputs]); // Rerun when workflow inputs change
-
-  // Effect to listen for messages FROM the iframe
-  useEffect(() => {
-    if (data.type !== 'REACT') return;
-
-    const handleMessageFromSandbox = (event) => {
-        const { type, payload } = event.data;
-        if (type === 'SET_WORKFLOW_OUTPUT') {
-            updateOutputValue(data.id, payload.key, payload.value);
-        } else if (type === 'TRIGGER_WORKFLOW_EXECUTION') {
-            executeGraph();
-        }
-    };
-
-    window.addEventListener('message', handleMessageFromSandbox);
-    return () => window.removeEventListener('message', handleMessageFromSandbox);
-  }, [data.id, updateOutputValue, executeGraph]);
 
   // The menu component, rendered conditionally
   const SettingsMenu = () => (
@@ -190,38 +108,6 @@ const CustomNode = ({ data }) => {
           </div>
         ))}
       </div>
-
-      {/* React IDE specific settings */}
-      {data.type === 'REACT' && (
-        <div className="react-ide-container">
-            <div className="editor-pane">
-                <label>JSX Code</label>
-                <Editor
-                    height="200px"
-                    language="javascript"
-                    theme="vs-dark"
-                    value={jsx}
-                    onChange={(value) => setJsx(value || '')}
-                    onBlur={() => updateNode(data.id, { jsx_code: jsx })}
-                />
-            </div>
-            <div className="editor-pane">
-                <label>CSS Code</label>
-                <Editor
-                    height="150px"
-                    language="css"
-                    theme="vs-dark"
-                    value={css}
-                    onChange={(value) => setCss(value || '')}
-                    onBlur={() => updateNode(data.id, { css_code: css })}
-                />
-            </div>
-            <div className="preview-pane">
-                <label>Live Preview</label>
-                <iframe ref={iframeRef} src="/sandbox.html" title="React Component Sandbox" sandbox="allow-scripts" style={{ width: '100%', height: '200px', border: '1px solid var(--input-border-color)', borderRadius: '4px' }} />
-            </div>
-        </div>
-      )}
     </div>
   );
 
