@@ -12,7 +12,7 @@ from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
 from block_types.loop_block import LoopBlock
 from api_schemas import API_SCHEMAS
-# from database import mongodb # Assuming this is used within Project class now
+from database import mongodb # Assuming this is used within Project class now
 from api_routes import api_v2
 from ai_routes import ai_bp
 import collections

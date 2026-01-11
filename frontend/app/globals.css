@@ -1,15 +1,15 @@
 :root {
     --background-color: #3f464e; /* Poorly wiped chalkboard grey */
-    --surface-color: #4E342E; /* Dark wood color */
+    --surface-color: #D7CCC8; /* Lighter wood color */
     --node-bg-color: #fffdf5; /* Paper note color */
     --node-text-color: #212121;
-    --border-color: #d7ccc8; /* Light wood/chalk border */
+    --border-color: #a1887f; /* Darker border for contrast */
     --text-color: #efebe9; /* Off-white text for wood/chalkboard */
-    --text-muted-color: #bcaaa4;
+    --text-muted-color: #5d4037; /* Darker muted text */
     --primary-color: #ffffff;
     --handle-color: #1a1a1a;
-    --hover-color: #BCAAA4; /* Lighter beige for hover effect */
-    --item-bg-color: #D7CCC8; /* Lighter background for items on panels */
+    --hover-color: #ffffff; /* White hover */
+    --item-bg-color: #efebe9; /* Lighter background for items on panels */
     --danger-color: #ef5350;
     --color-green: #c5e1a5;
     --color-red: #f48fb1;
@@ -19,9 +19,9 @@
     --button-hover-green: #aed581;
     --input-bg-color: #f5f5f5; /* Inputs on paper nodes */
     --input-border-color: #e0e0e0;
-    --panel-text-color: #EFEBE9; /* Light text for dark panel */
-    --panel-text-muted-color: #BCAAA4; /* Muted light text for dark panel */
-    --item-text-muted-color: #5f5f5f; /* Muted dark text for light items */
+    --panel-text-color: #000000; /* Black text for light panel */
+    --panel-text-muted-color: #5d4037; /* Dark muted text for light panel */
+    --item-text-muted-color: #795548; /* Muted dark text for light items */
 }
 
 /* Basic Reset & App Layout */
