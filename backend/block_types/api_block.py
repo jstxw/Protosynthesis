@@ -1,6 +1,6 @@
 import requests
 import json
-from backend.blocks import Block
+from blocks import Block
 from api_schemas import API_SCHEMAS
 from typing import Set
 

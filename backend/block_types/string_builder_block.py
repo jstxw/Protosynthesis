@@ -1,5 +1,5 @@
 import re
-from backend.blocks import Block
+from blocks import Block
 from typing import Set
 
 class StringBuilderBlock(Block):
