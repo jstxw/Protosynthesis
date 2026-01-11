@@ -7,6 +7,7 @@ import { ReactFlowProvider } from 'reactflow';
 import ControlPanel from '@/components/ControlPanel';
 import dynamic from 'next/dynamic';
 import ExecutionLog from '@/components/ExecutionLog';
+import AIAssistantPanel from '@/components/Assistant/AIAssistantPanel';
 import { useStore } from '@/helpers/store';
 
 // Dynamically import client-only components to prevent SSR hydration errors.
@@ -20,9 +21,14 @@ export default function WorkflowPage() {
   const searchParams = useSearchParams();
   const loadWorkflowFromV2 = useStore((state) => state.loadWorkflowFromV2);
   const setCurrentWorkflow = useStore((state) => state.setCurrentWorkflow);
+  const nodes = useStore((state) => state.nodes);
+  const activeBlockId = useStore((state) => state.activeBlockId);
 
   const projectId = searchParams.get('project');
   const workflowId = searchParams.get('workflow');
+
+  // Get node types for AI context
+  const currentNodeTypes = nodes.map(node => node.data?.type || node.type).filter(Boolean);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,6 +65,10 @@ export default function WorkflowPage() {
           </main>
           <ExecutionLog />
         </div>
+        <AIAssistantPanel
+          currentNodes={currentNodeTypes}
+          selectedNode={activeBlockId}
+        />
       </div>
     </ReactFlowProvider>
   );

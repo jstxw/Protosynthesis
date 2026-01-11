@@ -14,6 +14,7 @@ from block_types.get_key_block import GetKeyBlock
 from api_schemas import API_SCHEMAS
 from database import mongodb
 from api_routes import api_v2
+from ai_routes import ai_bp
 import collections
 import json
 
@@ -22,6 +23,9 @@ CORS(app) # Enable CORS for all routes
 
 # Register the new authenticated API routes (v2)
 app.register_blueprint(api_v2)
+
+# Register AI assistant routes
+app.register_blueprint(ai_bp)
 
 # Initialize MongoDB connection
 try:

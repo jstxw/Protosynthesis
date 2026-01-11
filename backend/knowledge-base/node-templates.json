@@ -1,0 +1,244 @@
+[
+  {
+    "id": "node_ai_claude",
+    "text": "Claude AI Node for intelligent text generation. This node calls the Anthropic Claude API to generate natural language responses, analyze content, answer questions, and create conversational experiences. Input ports: prompt/message (string), model selection (optional, defaults to claude-3-5-sonnet-20241022), max_tokens (number, optional). Output ports: generated_text (string extracted from API response), full_response (JSON object). Configuration: requires x-api-key credential (obtain from Anthropic console). Common workflow patterns: Connect START node to Claude, then connect output to Slack/Discord for notifications, or to another AI node for multi-step reasoning. Best practices: Use clear, specific prompts for better results. Set max_tokens between 1024-4096 for most tasks. Chain with other nodes for complex workflows. Handle errors by connecting to conditional node checking response status.",
+    "metadata": {
+      "category": "AI",
+      "provider": "anthropic",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "ai,nlp,chatbot,generation"
+    }
+  },
+  {
+    "id": "node_ai_gemini",
+    "text": "Google Gemini AI Node for multimodal intelligence. Powerful node for generating text, analyzing images, and processing complex inputs. Input ports: prompt (string), model (gemini-pro or gemini-pro-vision), contents (JSON for advanced usage). Output ports: generated_text (string), full_response (JSON). Configuration: requires Google API key. Workflow patterns: Use for creative content generation - connect START to Gemini to Discord. For image analysis workflows, use Data Transform node to prepare image data, then connect to Gemini. Chain with TTS nodes (ElevenLabs) for text-to-speech workflows. Best practices: Use gemini-pro for pure text tasks (faster, cheaper). Switch to gemini-pro-vision when images involved. Free tier generous but has rate limits. Handle rate limit errors with retry logic.",
+    "metadata": {
+      "category": "AI",
+      "provider": "google",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "ai,multimodal,vision,generation"
+    }
+  },
+  {
+    "id": "node_ai_openai",
+    "text": "OpenAI Responses Node for GPT-powered AI. Creates intelligent responses using OpenAI's latest models. Input ports: input_text (string), model (defaults to gpt-4.1), temperature (0-2 for randomness), max_output_tokens (length control). Output ports: message_text (extracted response), usage (token statistics), full_response (JSON). Configuration: Bearer token from OpenAI platform. Workflow patterns: Chatbot flows - connect user input to OpenAI to response formatter. Content pipelines - connect blog topic to OpenAI to grammar check to publishing. Best practices: Temperature 0.7-1.0 for creative tasks, 0-0.3 for factual. Monitor token usage via usage output to control costs. Implement caching for repeated queries.",
+    "metadata": {
+      "category": "AI",
+      "provider": "openai",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "ai,gpt,chatbot,generation"
+    }
+  },
+  {
+    "id": "node_ai_huggingface",
+    "text": "Hugging Face Inference Node for specialized ML models. Access thousands of pre-trained models for specific tasks. Input ports: input_text (string), model_id (e.g., 'gpt2', 'distilbert-base-uncased'). Output ports: generated_text or task-specific outputs. Configuration: requires Hugging Face API token. Workflow patterns: Sentiment analysis - connect customer feedback to Hugging Face (sentiment model) to conditional node routing positive/negative. Translation - connect source text to HF (translation model) to output. Best practices: Choose model based on task (check HF model hub). Smaller models = faster but less accurate. Test with different models to find best fit. Free tier available with generous limits.",
+    "metadata": {
+      "category": "AI",
+      "provider": "huggingface",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "ai,ml,nlp,specialized"
+    }
+  },
+  {
+    "id": "node_ai_stability",
+    "text": "Stability AI Image Generation Node. Creates stunning AI art from text descriptions. Input ports: text_prompt (string), cfg_scale (7-15 for prompt strength), height/width (512-1024), steps (20-50). Output ports: image_base64 (base64 encoded image), artifacts (all generated images). Configuration: API key from Stability AI. Workflow patterns: Art generation - connect prompt input to Stability to Slack (share image) + Database (store). Product mockup - connect description to Stability to image processing to storage. Best practices: Detailed prompts yield better results. Use 1024x1024 for highest quality. Steps 30+ for production. Cache frequently generated images. Consider costs - each generation consumes credits.",
+    "metadata": {
+      "category": "AI",
+      "provider": "stability",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "ai,image,generation,art"
+    }
+  },
+  {
+    "id": "node_ai_elevenlabs",
+    "text": "ElevenLabs Text-to-Speech Node. Converts text to natural-sounding speech with AI voice cloning. Input ports: text (up to 5000 chars), voice_id (voice selection), voice_settings (stability/similarity controls). Output ports: audio_base64 (encoded audio file), content_type. Configuration: xi-api-key from ElevenLabs. Workflow patterns: Narration pipeline - connect script to ElevenLabs to storage to distribution. Accessibility - connect content to TTS to audio player. Voicemail - connect message to TTS to Twilio. Best practices: Split long text into chunks. Adjust stability for consistency vs expressiveness. Use multilingual model for non-English. Preview voices before production. Monitor character usage.",
+    "metadata": {
+      "category": "AI",
+      "provider": "elevenlabs",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "ai,tts,voice,audio"
+    }
+  },
+  {
+    "id": "node_payment_stripe",
+    "text": "Stripe Payment Processing Node. Securely process credit card payments and charges. Input ports: amount (in cents!), currency (usd/eur/gbp), source (payment token), description. Output ports: charge_id, status (succeeded/failed/pending), full_response. Configuration: Secret key from Stripe dashboard. Workflow patterns: E-commerce checkout - connect cart total to Stripe to email receipt + database logging. Subscription - connect plan to Stripe to webhook handler. Best practices: CRITICAL - amount in cents (2000 = $20). Use idempotency keys to prevent duplicates. Never store raw card data. Test with tok_visa in test mode. Implement webhooks for payment status updates. Always connect to error handling node. Validate amounts before processing.",
+    "metadata": {
+      "category": "Payment",
+      "provider": "stripe",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "payment,stripe,ecommerce,billing"
+    }
+  },
+  {
+    "id": "node_payment_paypal",
+    "text": "PayPal Order Creation Node. Create PayPal payment orders for checkout flows. Input ports: intent (CAPTURE/AUTHORIZE), purchase_units (amount and currency). Output ports: order_id, status, approval_link. Configuration: OAuth2 access token. Workflow patterns: Checkout - connect cart to PayPal to redirect to approval_url to capture. Marketplace - connect seller/buyer to PayPal to split payment. Best practices: Use CAPTURE for immediate payment. Include item details for transparency. Store order_id for refunds. Implement webhook verification. Handle approved/cancelled states. Test in sandbox first.",
+    "metadata": {
+      "category": "Payment",
+      "provider": "paypal",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "payment,paypal,ecommerce"
+    }
+  },
+  {
+    "id": "node_finance_exchange",
+    "text": "Exchange Rates Node. Get latest currency exchange rates. Input ports: base_currency (USD default), app_id. Output ports: rates (JSON object), timestamp. Configuration: app_id from openexchangerates.org. Workflow patterns: Multi-currency pricing - connect product price to Exchange to price calculator to display. Expense tracking - connect transaction to Exchange to local currency converter. Best practices: Cache rates for 1 hour to reduce API calls. Free tier updates hourly. Multiply amount by rate[target_currency] to convert. Handle missing currencies gracefully.",
+    "metadata": {
+      "category": "Finance",
+      "provider": "openexchangerates",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "finance,currency,conversion"
+    }
+  },
+  {
+    "id": "node_comm_slack",
+    "text": "Slack Webhook Node. Post messages and notifications to Slack channels. Input ports: text (message content, markdown supported), blocks (optional rich formatting). Output ports: status. Configuration: Webhook URL from Slack app settings. Workflow patterns: Alerts - connect error handler to Slack for instant notifications. CI/CD - connect build status to Slack to team channel. Monitoring - connect health check to Slack (only on failure). Best practices: Keep messages concise and actionable. Use blocks for buttons, images, sections. Rate limit 1 msg/sec. Escape special characters. Don't overuse @channel. Test with personal DM first.",
+    "metadata": {
+      "category": "Communication",
+      "provider": "slack",
+      "nodeType": "webhook",
+      "difficulty": "beginner",
+      "tags": "notification,slack,team,alerts"
+    }
+  },
+  {
+    "id": "node_comm_discord",
+    "text": "Discord Webhook Node. Send rich messages to Discord channels. Input ports: content (message text), username (override), embeds (rich cards). Output ports: status. Configuration: Webhook URL from Discord channel settings. Workflow patterns: Game alerts - connect game events to Discord to player channel. Community updates - connect blog post to Discord with embed. Bot alternative - connect simple commands to Discord responses. Best practices: Use embeds for structured data. Color codes in decimal. Max 10 embeds per message. Include thumbnail for visual appeal. Rate limit 5 req per 2 sec.",
+    "metadata": {
+      "category": "Communication",
+      "provider": "discord",
+      "nodeType": "webhook",
+      "difficulty": "beginner",
+      "tags": "notification,discord,community"
+    }
+  },
+  {
+    "id": "node_comm_telegram",
+    "text": "Telegram Bot Node. Send messages via Telegram bot. Input ports: chat_id, text (up to 4096 chars), parse_mode (Markdown/HTML). Output ports: message_id, response. Configuration: Bot token from @BotFather. Workflow patterns: Notifications - connect alerts to Telegram to user. Chatbot - connect user message to AI to Telegram response. Group messages - connect announcement to Telegram to group chat. Best practices: Get chat_id from getUpdates first. Use Markdown for formatting. Escape special characters. Support private and group chats. Rate limit 30 msg/sec.",
+    "metadata": {
+      "category": "Communication",
+      "provider": "telegram",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "notification,telegram,chatbot"
+    }
+  },
+  {
+    "id": "node_comm_twilio",
+    "text": "Twilio SMS Node. Send text messages globally. Input ports: to (recipient +1...), from (your Twilio number), body (message). Output ports: message_sid, status. Configuration: AccountSid and Auth Token (Basic auth). Workflow patterns: OTP - connect auth request to random number to Twilio to verification. Reminders - connect scheduled task to Twilio to user phone. Alerts - connect critical error to Twilio to on-call team. Best practices: Include country code. Verify phone format. Monitor delivery via webhooks. Segment long messages. Handle opt-outs. Test credentials first.",
+    "metadata": {
+      "category": "Communication",
+      "provider": "twilio",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "sms,notification,twilio,mobile"
+    }
+  },
+  {
+    "id": "node_productivity_notion",
+    "text": "Notion Page Creation Node. Add pages to Notion databases. Input ports: parent (database_id or page_id), properties (matching database schema). Output ports: page_id, url, response. Configuration: Integration token from Notion. Workflow patterns: Knowledge base - connect article to Notion to index. CRM - connect customer data to Notion database. Task tracking - connect issue to Notion to project board. Best practices: Create integration in Notion first. Share database with integration. Match property types exactly. Use rich_text format. Include icon/cover.",
+    "metadata": {
+      "category": "Productivity",
+      "provider": "notion",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "productivity,notion,database,docs"
+    }
+  },
+  {
+    "id": "node_productivity_sheets",
+    "text": "Google Sheets Append Node. Add rows to spreadsheets. Input ports: spreadsheet_id, range, values (2D array), valueInputOption. Output ports: updates, spreadsheetId. Configuration: API key + OAuth. Workflow patterns: Data logging - connect form submission to Sheets to confirmation. Analytics - connect metrics to Sheets to chart. Report - connect daily stats to Sheets to dashboard. Best practices: Use A1 notation (Sheet1!A1). Values are row-major arrays. USER_ENTERED interprets formulas. Batch updates more efficient.",
+    "metadata": {
+      "category": "Productivity",
+      "provider": "google",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "productivity,sheets,data,logging"
+    }
+  },
+  {
+    "id": "node_productivity_calendar",
+    "text": "Google Calendar Event Node. Create calendar events. Input ports: summary (title), start (ISO datetime), end (ISO datetime). Output ports: event_id, htmlLink. Configuration: API key + Bearer token. Workflow patterns: Meeting scheduling - connect booking to Calendar to email confirmation. Reminders - connect task to Calendar to notification. Appointments - connect form to Calendar to customer invite. Best practices: Use ISO 8601 with timezone. Include location and description. Set attendees for invitations. Use recurrence for repeating. Check conflicts first.",
+    "metadata": {
+      "category": "Productivity",
+      "provider": "google",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "productivity,calendar,scheduling"
+    }
+  },
+  {
+    "id": "node_productivity_todoist",
+    "text": "Todoist Task Node. Create tasks in Todoist. Input ports: content (task description), project_id (optional), priority (1-4). Output ports: task_id, content, response. Configuration: Bearer API token. Workflow patterns: Task management - connect email to Todoist to GTD workflow. Project planning - connect milestone to Todoist to team notification. Automation - connect trigger to Todoist to productivity tracking. Best practices: Priority 4 = highest. Use project_id to organize. Natural language for due dates. Include labels. Sync after bulk ops.",
+    "metadata": {
+      "category": "Productivity",
+      "provider": "todoist",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "productivity,tasks,gtd"
+    }
+  },
+  {
+    "id": "node_database_airtable",
+    "text": "Airtable List Records Node. Query Airtable databases. Input ports: base_id, table_name, filterByFormula (optional), maxRecords (optional). Output ports: records (array with id and fields). Configuration: Bearer token. Workflow patterns: CRM lookup - connect customer_id to Airtable to profile display. Inventory - connect product to Airtable to stock check. Content - connect category to Airtable to items list. Best practices: URL encode table names. Use filterByFormula for server-side filtering. Paginate with offset for large sets. Cache results. Use views for pre-filtered data.",
+    "metadata": {
+      "category": "Database",
+      "provider": "airtable",
+      "nodeType": "api_call",
+      "difficulty": "beginner",
+      "tags": "database,airtable,crm"
+    }
+  },
+  {
+    "id": "node_database_mongodb",
+    "text": "MongoDB Find Document Node. Query MongoDB collections via Data API. Input ports: dataSource (cluster), database, collection, filter (MongoDB query JSON). Output ports: document (matched result). Configuration: app_id and api-key. Workflow patterns: User lookup - connect user_id to MongoDB to profile. Data retrieval - connect query to MongoDB to transform to display. Backend API - connect request to MongoDB to response. Best practices: Limit query complexity. Use projection for specific fields. Index frequently queried fields. Enable Data API in Atlas. Use findMany for multiple results. Secure api-key.",
+    "metadata": {
+      "category": "Database",
+      "provider": "mongodb",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "database,mongodb,nosql"
+    }
+  },
+  {
+    "id": "node_utility_custom",
+    "text": "Custom API Node. Call any HTTP endpoint. Input ports: url (full endpoint), method (GET/POST/PUT/DELETE), params (query JSON), body (request JSON), headers (custom headers JSON). Output ports: response_json, status_code. Configuration: none (flexible). Workflow patterns: Prototype - connect test data to Custom to response validation. Third-party API - connect auth to Custom (unlisted API) to parser. Webhook - connect event to Custom to external service. Best practices: Test with simple GET first. Validate JSON format. Check API docs for method. Use Postman to test first. Handle auth via headers.",
+    "metadata": {
+      "category": "Utility",
+      "provider": "custom",
+      "nodeType": "api_call",
+      "difficulty": "intermediate",
+      "tags": "utility,custom,flexible"
+    }
+  },
+  {
+    "id": "node_start",
+    "text": "START Node - Workflow Entry Point. Every workflow must begin with a START node. This node has no inputs and provides a single output: trigger (execution signal). When you click 'Run Workflow', execution begins at the START node and flows to connected nodes. Common patterns: Single START for linear workflows, multiple paths from START using conditional routing. Best practices: Every workflow needs exactly one START node. Connect START to your first action (API call, data fetch, etc). For complex workflows, add a comment node next to START explaining the workflow purpose.",
+    "metadata": {
+      "category": "Core",
+      "provider": "system",
+      "nodeType": "trigger",
+      "difficulty": "beginner",
+      "tags": "core,start,trigger"
+    }
+  },
+  {
+    "id": "node_dialogue",
+    "text": "DIALOGUE Node - Display or Collect User Input. This node shows messages to users or collects input during workflow execution. Input ports: message (string or JSON to display). Output ports: user_input (if require_input enabled). Configuration: require_input toggle, message format. Workflow patterns: Confirmation - connect result to DIALOGUE to show success message. Input collection - enable require_input, connect DIALOGUE output to next node. Debugging - connect any node output to DIALOGUE to inspect data. Best practices: Use for user feedback, not logging (use dedicated logging). Format JSON with pretty print for readability. Don't overuse - only when user interaction needed.",
+    "metadata": {
+      "category": "Core",
+      "provider": "system",
+      "nodeType": "interaction",
+      "difficulty": "beginner",
+      "tags": "core,ui,input,output"
+    }
+  }
+]
