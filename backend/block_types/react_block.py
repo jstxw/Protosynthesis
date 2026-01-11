@@ -2,23 +2,26 @@ from blocks import Block
 
 class ReactBlock(Block):
     """
-    A special block that can both display data from the graph and provide
-    user-entered data back into the graph.
+    A block for creating interactive UI components with React.
+    The code is edited and rendered on the frontend.
     """
-    def __init__(self, name: str, x: float = 0.0, y: float = 0.0):
+    def __init__(self, name: str, jsx_code: str = "", css_code: str = "", x: float = 0.0, y: float = 0.0):
         super().__init__(name, block_type="REACT", x=x, y=y)
+        self.jsx_code = jsx_code
+        self.css_code = css_code
         
-        # Input to trigger execution if this block is part of a larger flow
-        self.register_input("trigger", data_type="any", hidden=True)
-        # Data to display IN the React component (when acting as a sink)
-        self.register_input("display_data", data_type="any")
-        
-        # Data from a user TO the graph (when acting as a source)
-        # If unconnected, this is a manual input on the frontend.
-        self.register_input("user_input", data_type="string")
-        self.register_output("value_out", data_type="string")
+        # Default I/O for demonstration
+        self.register_input("data_in", data_type="any")
+        self.register_output("data_out", data_type="any")
 
     def execute(self):
-        # Pass the value from the 'user_input' port to the 'value_out' port.
-        # This allows the block to act as a source for downstream blocks.
-        self.outputs["value_out"] = self.inputs.get("user_input")
+        # The core logic is handled on the frontend.
+        # The backend just acts as a data pass-through if needed.
+        # For now, we do noting during server side execution.
+        pass
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["jsx_code"] = self.jsx_code
+        data["css_code"] = self.css_code
+        return data

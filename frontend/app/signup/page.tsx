@@ -2,26 +2,28 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Key, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import '../auth.css';
 
 /**
- * Sign Up Page Component
+ * Signup Page Component
  *
  * Features:
  * - Username/password registration via Supabase
- * - Social signup options (Google, GitHub)
+ * - Social login options (Google, GitHub)
  * - Password visibility toggle
- * - Form validation
- * - Responsive split-screen design
+ * - Password confirmation
+ * - Error handling
+ * - Node-based visual design
  */
 export function SignUp() {
     const { signUp } = useAuth();
-    const [formData, setFormData] = useState({
-        username: '',
-        password: '',
-    });
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -29,14 +31,8 @@ export function SignUp() {
         e.preventDefault();
         setError('');
 
-        // Validation
-        if (formData.username.length < 3) {
-            setError('Username must be at least 3 characters');
-            return;
-        }
-
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (password !== confirmPassword) {
+            setError('Passwords do not match.');
             return;
         }
 
@@ -44,179 +40,205 @@ export function SignUp() {
 
         try {
             // Generate email from username for Supabase (internal use only)
-            const generatedEmail = `${formData.username}@nodelink.app`;
-            await signUp(generatedEmail, formData.password, formData.username);
+            const generatedEmail = `${username}@nodelink.app`;
+            await signUp(generatedEmail, password, username);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
+            setError(err instanceof Error ? err.message : 'Failed to create an account. Please try again.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleSocialSignup = (provider: 'google' | 'github') => {
+    const handleSocialLogin = (provider: 'google' | 'github') => {
         console.log(`Sign up with ${provider}`);
-        // TODO: Implement social signup with Supabase
-    };
-
-    const updateFormData = (field: string, value: string) => {
-        setFormData({ ...formData, [field]: value });
+        // TODO: Implement social login with Supabase
     };
 
     return (
-        <div className="min-h-screen bg-black flex">
-            {/* Left Side - Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-12">
-                <div className="w-full max-w-md">
-                    {/* Logo */}
-                    <div className="mb-8">
-                        <img
-                            src="/icons/logo.svg"
-                            alt="Logo"
-                            className="w-16 h-16 mb-6"
-                        />
-                        <h1 className="text-hero text-text-primary mb-2">Create account</h1>
-                        <p className="text-body text-text-secondary">
-                            Start building powerful API workflows today.
-                        </p>
+        <div className="auth-page">
+            <div className="auth-nodes-container" style={{ position: 'relative' }}>
+                {/* User Info Node (Left) */}
+                <div className="auth-node user-info-node" style={{ position: 'relative', zIndex: 1 }}>
+                    <div className="node-icon-nub node-header-userinfo">
+                        <User className="node-nub-icon" size={22} />
                     </div>
+                    <header className="node-header node-header-userinfo">
+                        <h1>User Info</h1>
+                        <span className="node-type">INFO</span>
+                    </header>
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="mb-6 p-4 bg-status-error/10 border border-status-error/20 rounded-lg flex items-center gap-3">
-                            <AlertCircle className="w-5 h-5 text-status-error flex-shrink-0" />
-                            <p className="text-small text-status-error">{error}</p>
-                        </div>
-                    )}
-
-                    {/* Social Signup */}
-                    <div className="space-y-3 mb-6">
-                        <button
-                            onClick={() => handleSocialSignup('google')}
-                            className="btn-secondary w-full justify-center"
-                        >
-                            <img src="/icons/google.svg" alt="Google" className="w-5 h-5" />
-                            <span>Continue with Google</span>
-                        </button>
-                        <button
-                            onClick={() => handleSocialSignup('github')}
-                            className="btn-secondary w-full justify-center"
-                        >
-                            <img src="/icons/github.svg" alt="GitHub" className="w-5 h-5" />
-                            <span>Continue with GitHub</span>
-                        </button>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-small">
-                            <span className="px-4 bg-black text-text-tertiary">Or create an account</span>
-                        </div>
-                    </div>
-
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Username */}
-                        <div>
-                            <label htmlFor="username" className="form-label">
-                                Username
-                            </label>
-                            <div className="input-with-icon">
-                                <User className="input-icon-left w-5 h-5" />
+                    <main className="auth-body">
+                        {/* Username Port */}
+                        <div className="auth-port output">
+                            <div className="auth-port-content">
+                                <label htmlFor="username">Username</label>
                                 <input
                                     id="username"
                                     type="text"
-                                    value={formData.username}
-                                    onChange={(e) => updateFormData('username', e.target.value)}
-                                    placeholder="johndoe"
-                                    className="form-input"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    placeholder="Choose a username"
                                     required
                                 />
                             </div>
+                            <div className="auth-port-handle connected"></div>
                         </div>
 
-                        {/* Password */}
-                        <div>
-                            <label htmlFor="password" className="form-label">
-                                Password
-                            </label>
-                            <div className="input-with-icon input-with-icon-right">
-                                <Lock className="input-icon-left w-5 h-5" />
-                                <input
-                                    id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={formData.password}
-                                    onChange={(e) => updateFormData('password', e.target.value)}
-                                    placeholder="••••••••"
-                                    className="form-input"
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="input-icon-right hover:text-text-primary transition-colors cursor-pointer"
-                                    style={{ pointerEvents: 'auto' }}
-                                >
-                                    {showPassword ? (
-                                        <EyeOff className="w-5 h-5" />
-                                    ) : (
-                                        <Eye className="w-5 h-5" />
-                                    )}
+                        {/* Password Port */}
+                        <div className="auth-port output">
+                            <div className="auth-port-content">
+                                <label htmlFor="password">Password</label>
+                                <div className="password-input-wrapper">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Create a password"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="password-toggle"
+                                    >
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="auth-port-handle connected"></div>
+                        </div>
+
+                        {/* Confirm Password Port */}
+                        <div className="auth-port output">
+                            <div className="auth-port-content">
+                                <label htmlFor="confirm-password">Confirm Password</label>
+                                <div className="password-input-wrapper">
+                                    <input
+                                        id="confirm-password"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="Confirm your password"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="password-toggle"
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="auth-port-handle connected"></div>
+                        </div>
+                    </main>
+                </div>
+
+                {/* Animated Connector Lines */}
+                <svg className="auth-connector-svg" style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none',
+                    zIndex: 0
+                }}>
+                    {/* Username line */}
+                    <line className="auth-connector-line" x1="280" y1="90" x2="320" y2="90" />
+                    {/* Password line */}
+                    <line className="auth-connector-line" x1="280" y1="130" x2="320" y2="130" />
+                    {/* Confirm Password line */}
+                    <line className="auth-connector-line" x1="280" y1="170" x2="320" y2="170" />
+                </svg>
+
+                {/* Create Account Node (Right) */}
+                <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
+                    <div className="auth-node main-auth-node">
+                        <div className="node-icon-nub node-header-signup">
+                            <Key className="node-nub-icon" size={22} />
+                        </div>
+                        <header className="node-header node-header-signup">
+                            <h1>Create Account</h1>
+                            <span className="node-type">AUTH</span>
+                        </header>
+
+                        {error && (
+                            <div className="auth-error">
+                                <AlertCircle size={16} />
+                                <span>{error}</span>
+                            </div>
+                        )}
+
+                        <main className="auth-body">
+                            {/* Username Input Port */}
+                            <div className="auth-port input">
+                                <div className="auth-port-handle connected"></div>
+                                <div className="auth-port-content">
+                                    <div className="auth-port-label">
+                                        <span>Username</span>
+                                        <span className="port-type">(string)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Password Input Port */}
+                            <div className="auth-port input">
+                                <div className="auth-port-handle connected"></div>
+                                <div className="auth-port-content">
+                                    <div className="auth-port-label">
+                                        <span>Password</span>
+                                        <span className="port-type">(string)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Confirm Password Input Port */}
+                            <div className="auth-port input">
+                                <div className="auth-port-handle connected"></div>
+                                <div className="auth-port-content">
+                                    <div className="auth-port-label">
+                                        <span>Confirm Password</span>
+                                        <span className="port-type">(string)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Submit Button Port */}
+                            <div className="auth-port output">
+                                <div className="auth-port-content">
+                                    <button type="submit" disabled={isLoading} className="auth-button">
+                                        {isLoading ? 'Creating Account...' : 'Sign Up'}
+                                    </button>
+                                </div>
+                                <div className="auth-port-handle"></div>
+                            </div>
+                        </main>
+
+                        <footer className="auth-footer">
+                            <div className="auth-divider">Or</div>
+                            <div className="social-buttons">
+                                <button type="button" onClick={() => handleSocialLogin('google')} className="social-button">
+                                    <svg viewBox="0 0 24 24" width="18" height="18">
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                    </svg>
+                                    <span>Continue with Google</span>
                                 </button>
                             </div>
-
-                        </div>
-
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="btn-primary w-full justify-center"
-                        >
-                            {isLoading ? 'Creating account...' : 'Create account'}
-                        </button>
-                    </form>
-
-                    {/* Login Link */}
-                    <p className="mt-6 text-center text-small text-text-secondary">
-                        Already have an account?{' '}
-                        <Link
-                            href="/login"
-                            className="text-accent-blue hover:text-accent-blue-hover font-medium transition-colors"
-                        >
-                            Sign in
-                        </Link>
-                    </p>
-                </div>
-            </div>
-
-            {/* Right Side - Hero Image */}
-            <div className="hidden lg:flex lg:w-1/2 bg-app-panel items-center justify-center p-12">
-                <div className="max-w-lg text-center">
-                    <img
-                        src="/icons/hero-illustration.svg"
-                        alt="API Workflow"
-                        className="w-full mb-8 opacity-90"
-                    />
-                    <h2 className="text-heading text-text-primary mb-4">
-                        Join thousands of developers
-                    </h2>
-                    <p className="text-body text-text-secondary mb-6">
-                        Build, test, and deploy API workflows faster than ever. No infrastructure management needed.
-                    </p>
-                    <div className="flex items-center justify-center gap-4 text-small text-text-tertiary">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-status-success" />
-                            <span>Free to start</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-status-success" />
-                            <span>No credit card</span>
-                        </div>
+                            <p className="auth-link">
+                                Already have an account?{' '}
+                                <Link href="/login">
+                                    Sign in
+                                </Link>
+                            </p>
+                        </footer>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     );

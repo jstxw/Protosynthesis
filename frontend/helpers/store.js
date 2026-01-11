@@ -9,6 +9,15 @@ import { apiClient } from '../services/api';
 
 const API_URL = 'http://localhost:5001/api';
 
+const createFlowNode = (blockData) => ({
+    id: blockData.id,
+    type: 'custom',
+    position: { x: blockData.x, y: blockData.y },
+    data: { ...blockData, type: blockData.block_type },
+    connectable: !blockData.is_collapsed,
+    draggable: true, style: blockData.is_collapsed ? { width: '50px', height: '50px' } : {},
+});
+
 export const useStore = create((set, get) => ({
     // State
     nodes: [],
@@ -18,6 +27,8 @@ export const useStore = create((set, get) => ({
     activeBlockId: null,
     executionLogs: [],
     hoveredNodeId: null,
+    selectedNodeIds: [],
+    isExecuting: false,
     currentProjectId: null,
     currentWorkflowId: null,
     autoSaveTimer: null,
@@ -37,13 +48,7 @@ export const useStore = create((set, get) => ({
             const response = await axios.get(`${API_URL}/graph`);
             const {nodes, edges} = response.data;
 
-            const flowNodes = nodes.map(node => ({
-                id: node.id,
-                type: 'custom',
-                position: {x: node.x, y: node.y},
-                data: node,
-            }));
-
+            const flowNodes = nodes.map(createFlowNode);
             set({nodes: flowNodes, edges});
         } catch (error) {
             console.error("Failed to fetch graph:", error);
@@ -139,12 +144,7 @@ export const useStore = create((set, get) => ({
             });
             const newNodeData = response.data.block;
 
-            const flowNode = {
-                id: newNodeData.id,
-                type: 'custom',
-                position: {x: newNodeData.x, y: newNodeData.y},
-                data: {...newNodeData, type: newNodeData.block_type},
-            };
+            const flowNode = createFlowNode(newNodeData);
             set(state => ({nodes: [...state.nodes, flowNode]}));
             // Trigger auto-save for v2 workflows
             get().scheduleAutoSave();
@@ -163,10 +163,7 @@ export const useStore = create((set, get) => ({
             set(state => ({
                 nodes: state.nodes.map(n => {
                     if (n.id === nodeId) {
-                        return {
-                            ...n,
-                            data: {...updatedNodeData, type: updatedNodeData.block_type}
-                        };
+                        return createFlowNode(updatedNodeData);
                     }
                     return n;
                 })
@@ -203,6 +200,33 @@ export const useStore = create((set, get) => ({
         }
     },
 
+    updateOutputValue: async (nodeId, outputKey, value) => {
+        try {
+            // Call the new backend endpoint
+            await axios.post(`${API_URL}/block/update_output_value`, {
+                block_id: nodeId,
+                output_key: outputKey,
+                value: value,
+            });
+
+            // Update the local state optimistically
+            set(state => ({
+                nodes: state.nodes.map(node => {
+                    if (node.id === nodeId) {
+                        const newOutputs = node.data.outputs.map(out =>
+                            out.key === outputKey ? { ...out, value: value } : out
+                        );
+                        return { ...node, data: { ...node.data, outputs: newOutputs } };
+                    }
+                    return node;
+                })
+            }));
+        } catch (error) {
+            console.error("Failed to update output value:", error);
+            alert("Failed to save user input.");
+        }
+    },
+
     removeBlock: async (nodeId) => {
         try {
             await axios.post(`${API_URL}/block/remove`, {block_id: nodeId});
@@ -232,19 +256,72 @@ export const useStore = create((set, get) => ({
         }
     },
 
-    setHoveredNodeId: (nodeId) => {
+    toggleCollapseNode: async (nodeId) => {
+        const node = get().nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        const isCollapsed = !node.data.is_collapsed;
+
+        // Optimistic UI update
+        set(state => ({
+            nodes: state.nodes.map(n => {
+                if (n.id === nodeId) {
+                    return {
+                        ...n,
+                        data: { ...n.data, is_collapsed: isCollapsed },
+                        connectable: !isCollapsed,
+                        style: isCollapsed ? { width: '50px', height: '50px' } : {}
+                    };
+                }
+                return n;
+            })
+        }));
+
+        // Sync with backend
+        axios.post(`${API_URL}/block/update`, { block_id: nodeId, is_collapsed: isCollapsed })
+            .catch(err => console.error("Failed to sync collapse state:", err));
+    },
+
+    // --- UI & ANIMATION MANAGEMENT ---
+
+    _updateEdgeAnimations: () => {
         set(state => {
-            if (state.hoveredNodeId === nodeId) return {};
-            
-            const targetId = nodeId || state.activeBlockId;
+            const hotNodeIds = new Set();
+
+            // During execution, only the active block is "hot"
+            if (state.isExecuting) {
+                if (state.activeBlockId) hotNodeIds.add(state.activeBlockId);
+            } else {
+                // Otherwise, consider hovered and selected nodes
+                if (state.hoveredNodeId) hotNodeIds.add(state.hoveredNodeId);
+                state.selectedNodeIds.forEach(id => hotNodeIds.add(id));
+            }
+
             const newEdges = state.edges.map(edge => {
-                const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
+                const isConnected = hotNodeIds.has(edge.source) || hotNodeIds.has(edge.target);
                 const newClassName = isConnected ? 'animated-edge' : '';
                 if (edge.className === newClassName) return edge;
                 return { ...edge, className: newClassName };
             });
-            return { hoveredNodeId: nodeId, edges: newEdges };
+
+            // Avoid re-render if edges haven't changed class
+            const hasChanged = state.edges.length !== newEdges.length ||
+                               newEdges.some((edge, i) => edge.className !== state.edges[i].className);
+
+            if (!hasChanged) return {};
+
+            return { edges: newEdges };
         });
+    },
+
+    onSelectionChange: ({ nodes: selectedFlowNodes }) => {
+        set({ selectedNodeIds: selectedFlowNodes.map(n => n.id) });
+        get()._updateEdgeAnimations();
+    },
+
+    setHoveredNodeId: (nodeId) => {
+        set({ hoveredNodeId: nodeId });
+        get()._updateEdgeAnimations();
     },
 
     togglePortVisibility: (nodeId, key, type) => {
@@ -268,7 +345,7 @@ export const useStore = create((set, get) => ({
 
     // --- EXECUTION ---
     executeGraph: async () => {
-        set({ executionLogs: ["Starting execution..."], activeBlockId: null, executionResult: null });
+        set({ isExecuting: true, executionLogs: ["Starting execution..."], activeBlockId: null, executionResult: null });
 
         try {
             const response = await fetch(`${API_URL}/execute`, {
@@ -296,35 +373,33 @@ export const useStore = create((set, get) => ({
                         const event = JSON.parse(trimmedLine);
 
                         if (event.type === 'start') {
-                            set(state => {
-                                const targetId = state.hoveredNodeId || event.block_id;
-                                const newEdges = state.edges.map(edge => {
-                                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
-                                    const newClassName = isConnected ? 'animated-edge' : '';
-                                    return { ...edge, className: newClassName };
+                            set({ activeBlockId: event.block_id });
+                            get()._updateEdgeAnimations();
+
+                            // Handle Dialogue Interactions
+                            if (event.block_type === 'DIALOGUE') {
+                                let messageContent = event.inputs && event.inputs.message;
+
+                                if (typeof messageContent === 'object' && messageContent !== null) {
+                                    messageContent = JSON.stringify(messageContent, null, 2);
+                                }
+                                
+                                // This is a blocking call on the main thread.
+                                const userInput = window.prompt(`${messageContent || ''}`, "") || "";
+                                
+                                // Update the local UI immediately for a responsive feel
+                                get().updateOutputValue(event.block_id, 'response', userInput);
+
+                                // Tell the backend to unblock the execution thread.
+                                axios.post(`${API_URL}/execution/respond`, {
+                                    block_id: event.block_id,
+                                    value: userInput
                                 });
-                                return { activeBlockId: event.block_id, edges: newEdges };
-                            });
+                            }
                         } else if (event.type === 'progress') {
                             set(state => ({
                                 executionLogs: [...(state.executionLogs || []), `Executed ${event.name} (${event.block_type})`]
                             }));
-
-                            // Handle Dialogue Interactions
-                            if (event.block_type === 'DIALOGUE') {
-                                 const requireInput = event.inputs && event.inputs.require_input;
-                                 let messageContent = event.inputs && event.inputs.message;
-
-                                 if (typeof messageContent === 'object' && messageContent !== null) {
-                                     messageContent = JSON.stringify(messageContent, null, 2);
-                                 }
-
-                                 if (requireInput) {
-                                     window.prompt(`[${event.name}] Input required:\n${messageContent || ''}`, "");
-                                 } else {
-                                     window.alert(`[${event.name}] Message:\n${messageContent || ''}`);
-                                 }
-                             }
 
                             // Update node outputs in real-time
                             set(state => ({
@@ -344,19 +419,9 @@ export const useStore = create((set, get) => ({
                                 executionLogs: [...(state.executionLogs || []), `Error in ${event.name}: ${event.error}`]
                             }));
                         } else if (event.type === 'complete') {
-                            set(state => {
-                                const targetId = state.hoveredNodeId;
-                                const newEdges = state.edges.map(edge => {
-                                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
-                                    const newClassName = isConnected ? 'animated-edge' : '';
-                                    return { ...edge, className: newClassName };
-                                });
-                                return {
-                                    activeBlockId: null,
-                                    executionLogs: [...(state.executionLogs || []), "Execution complete."],
-                                    edges: newEdges
-                                };
-                            });
+                            set({ activeBlockId: null, isExecuting: false });
+                            get()._updateEdgeAnimations();
+                            set(state => ({ executionLogs: [...(state.executionLogs || []), "Execution complete."] }));
                         }
                     } catch (e) {
                         // Skip invalid JSON lines (common in streaming responses)
@@ -368,19 +433,9 @@ export const useStore = create((set, get) => ({
             }
         } catch (error) {
             console.error("Failed to execute graph:", error);
-            set(state => {
-                const targetId = state.hoveredNodeId;
-                const newEdges = state.edges.map(edge => {
-                    const isConnected = targetId && (edge.source === targetId || edge.target === targetId);
-                    const newClassName = isConnected ? 'animated-edge' : '';
-                    return { ...edge, className: newClassName };
-                });
-                return { 
-                    activeBlockId: null,
-                    edges: newEdges,
-                    executionLogs: [...(state.executionLogs || []), `Error: ${error.message}`] 
-                };
-            });
+            set({ activeBlockId: null, isExecuting: false });
+            get()._updateEdgeAnimations();
+            set(state => ({ executionLogs: [...(state.executionLogs || []), `Error: ${error.message}`] }));
         }
     },
 

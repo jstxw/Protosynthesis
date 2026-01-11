@@ -1,7 +1,8 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import { useStore } from '../helpers/store';
 import Image from 'next/image';
+import Editor from '@monaco-editor/react';
 
 const getIconForType = (type) => {
   switch (type) {
@@ -11,16 +12,21 @@ const getIconForType = (type) => {
     case 'LOGIC': return '/branch.svg';
     case 'TRANSFORM': return '/shuffle.svg';
     case 'WAIT': return '/clock.svg';
+    case 'LOOP': return '/loop.svg';
     case 'API': return '/window.svg';
-    case 'GET_KEY': return '/key.svg';
     case 'DIALOGUE': return '/chat.svg';
     default: return null;
   }
 };
 
 const CustomNode = ({ data }) => {
-  const { updateNode, updateInputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId } = useStore();
+  const { updateNode, updateInputValue, updateOutputValue, edges, togglePortVisibility, apiSchemas, removeBlock, activeBlockId, executeGraph } = useStore();
   const [name, setName] = useState(data.name || '');
+
+  // State for React IDE
+  const [jsx, setJsx] = useState(data.jsx_code || '');
+  const [css, setCss] = useState(data.css_code || '');
+  const iframeRef = useRef(null);
 
   useEffect(() => {
     setName(data.name || '');
@@ -50,9 +56,87 @@ const CustomNode = ({ data }) => {
     updateNode(data.id, { delay: e.target.value });
   };
 
-  const handleMockResponseChange = (e) => {
-    updateInputValue(data.id, 'mock_response', e.target.value);
+  const getHeaderClass = () => {
+    switch (data.type) {
+      case 'API': return 'node-header-api';
+      case 'START': return 'node-header-start';
+      case 'REACT': return 'node-header-react';
+      case 'STRING_BUILDER': return 'node-header-string';
+      case 'LOGIC': return 'node-header-logic';
+      case 'TRANSFORM': return 'node-header-transform';
+      case 'WAIT': return 'node-header-wait';
+      case 'LOOP': return 'node-header-logic'; // Reuse logic color
+      case 'DIALOGUE': return 'node-header-dialogue';
+      default: return '';
+    }
   };
+
+  // --- EFFECTS FOR REACT IDE ---
+
+  // Effect to send code to iframe when it's ready or code changes
+  useEffect(() => {
+    if (data.type !== 'REACT') return;
+
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleSandboxReady = (event) => {
+        if (event.data.type === 'SANDBOX_READY') {
+            iframe.contentWindow.postMessage({
+                type: 'RENDER_COMPONENT',
+                payload: {
+                    jsx: jsx,
+                    css: css,
+                    props: data.inputs.reduce((acc, input) => {
+                        acc[input.key] = input.value;
+                        return acc;
+                    }, {})
+                }
+            }, '*');
+        }
+    };
+    
+    window.addEventListener('message', handleSandboxReady);
+
+    return () => window.removeEventListener('message', handleSandboxReady);
+  }, [iframeRef.current, jsx, css]); // Rerun if code changes
+
+  // Effect to send updated props (from workflow) to iframe
+  useEffect(() => {
+    if (data.type !== 'REACT') return;
+
+    const iframe = iframeRef.current;
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+            type: 'RENDER_COMPONENT', // Re-rendering with new props is the simplest way
+            payload: {
+                jsx: jsx,
+                css: css,
+                props: data.inputs.reduce((acc, input) => {
+                    acc[input.key] = input.value;
+                    return acc;
+                }, {})
+            }
+        }, '*');
+    }
+  }, [data.inputs]); // Rerun when workflow inputs change
+
+  // Effect to listen for messages FROM the iframe
+  useEffect(() => {
+    if (data.type !== 'REACT') return;
+
+    const handleMessageFromSandbox = (event) => {
+        const { type, payload } = event.data;
+        if (type === 'SET_WORKFLOW_OUTPUT') {
+            updateOutputValue(data.id, payload.key, payload.value);
+        } else if (type === 'TRIGGER_WORKFLOW_EXECUTION') {
+            executeGraph();
+        }
+    };
+
+    window.addEventListener('message', handleMessageFromSandbox);
+    return () => window.removeEventListener('message', handleMessageFromSandbox);
+  }, [data.id, updateOutputValue, executeGraph]);
 
   // The menu component, rendered conditionally
   const SettingsMenu = () => (
@@ -106,6 +190,38 @@ const CustomNode = ({ data }) => {
           </div>
         ))}
       </div>
+
+      {/* React IDE specific settings */}
+      {data.type === 'REACT' && (
+        <div className="react-ide-container">
+            <div className="editor-pane">
+                <label>JSX Code</label>
+                <Editor
+                    height="200px"
+                    language="javascript"
+                    theme="vs-dark"
+                    value={jsx}
+                    onChange={(value) => setJsx(value || '')}
+                    onBlur={() => updateNode(data.id, { jsx_code: jsx })}
+                />
+            </div>
+            <div className="editor-pane">
+                <label>CSS Code</label>
+                <Editor
+                    height="150px"
+                    language="css"
+                    theme="vs-dark"
+                    value={css}
+                    onChange={(value) => setCss(value || '')}
+                    onBlur={() => updateNode(data.id, { css_code: css })}
+                />
+            </div>
+            <div className="preview-pane">
+                <label>Live Preview</label>
+                <iframe ref={iframeRef} src="/sandbox.html" title="React Component Sandbox" sandbox="allow-scripts" style={{ width: '100%', height: '200px', border: '1px solid var(--input-border-color)', borderRadius: '4px' }} />
+            </div>
+        </div>
+      )}
     </div>
   );
 
@@ -157,35 +273,20 @@ const CustomNode = ({ data }) => {
 
   const isActive = activeBlockId === data.id;
 
-  const getHeaderClass = () => {
-    switch (data.type) {
-      case 'API': return 'node-header-api';
-      case 'START': return 'node-header-start';
-      case 'REACT': return 'node-header-react';
-      case 'STRING_BUILDER': return 'node-header-string';
-      case 'LOGIC': return 'node-header-logic';
-      case 'TRANSFORM': return 'node-header-transform';
-      case 'WAIT': return 'node-header-wait';
-      case 'GET_KEY': return 'node-header-logic'; // Reuse logic color
-      case 'DIALOGUE': return 'node-header-dialogue';
-      default: return '';
-    }
-  };
-
   return (
     <div className={`custom-node ${isActive ? 'active-block' : ''}`}>
       {getIconForType(data.type) && (
         <div className={`node-icon-nub ${getHeaderClass()}`}>
           <Image 
             src={getIconForType(data.type)} 
-            width={28} 
-            height={28} 
+            width={22} 
+            height={22} 
             alt="" 
             className="node-nub-icon" 
           />
         </div>
       )}
-      <div className={`node-header ${getHeaderClass()}`}>
+       <div className={`node-header ${getHeaderClass()}`}>
         <div style={{ display: 'grid', marginRight: 'auto' }}>
           <span style={{ 
             gridArea: '1/1', 
@@ -217,7 +318,7 @@ const CustomNode = ({ data }) => {
 
       <div className="node-body">
         <div className="node-ports">
-          <div className="port-column">
+          <div className="port-column" style={{ minWidth: '50%' }}>
             <div className="port-title">Inputs</div>
             {data.inputs
               .filter(input => !data.hidden_inputs?.includes(input.key))
@@ -225,7 +326,7 @@ const CustomNode = ({ data }) => {
           </div>
           <div className="port-column">
             <div className="port-title">Outputs</div>
-            {data.outputs
+            {data.outputs.length > 0 && data.outputs
               .filter(output => !data.hidden_outputs?.includes(output.key))
               .map(output => renderPort(output, 'output'))}
           </div>
@@ -254,6 +355,7 @@ const CustomNode = ({ data }) => {
               style={{ width: '100%', marginBottom: '5px' }}
             >
               <option value="to_string">To String</option>
+              <option value="get_key">Get Key from JSON</option>
               <option value="to_json">To JSON</option>
               <option value="params_to_json">Params to JSON</option>
             </select>
@@ -309,19 +411,6 @@ const CustomNode = ({ data }) => {
           </div>
         )}
 
-        {data.type === 'DIALOGUE' && (
-          <div className="node-config">
-            
-            <label style={{marginTop: '10px'}}>Mock Response (for backend)</label>
-            <input
-              type="text"
-              className="nodrag"
-              defaultValue={data.inputs.find(i => i.key === 'mock_response')?.value || ''}
-              onBlur={handleMockResponseChange}
-              style={{ width: '100%' }}
-            />
-          </div>
-        )}
       </div>
 
       {data.menu_open && <SettingsMenu />}

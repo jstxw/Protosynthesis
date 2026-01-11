@@ -13,7 +13,7 @@ from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
 from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
-from block_types.get_key_block import GetKeyBlock
+from block_types.loop_block import LoopBlock
 
 class Project:
     """
@@ -66,6 +66,9 @@ class Project:
                 block_data["url"] = block.url
                 block_data["method"] = block.method
                 block_data["schema_key"] = block.schema_key
+            elif isinstance(block, ReactBlock):
+                block_data["jsx_code"] = block.jsx_code
+                block_data["css_code"] = block.css_code
             elif isinstance(block, LogicBlock):
                 block_data["operation"] = block.operation
             elif isinstance(block, TransformBlock):
@@ -121,7 +124,12 @@ class Project:
             elif b_type == "LOGIC":
                 block = LogicBlock(name, block_data.get("operation", "add"), x=x, y=y)
             elif b_type == "REACT":
-                block = ReactBlock(name, x=x, y=y)
+                block = ReactBlock(
+                    name, 
+                    jsx_code=block_data.get("jsx_code", ""), 
+                    css_code=block_data.get("css_code", ""), 
+                    x=x, y=y
+                )
             elif b_type == "TRANSFORM":
                 block = TransformBlock(name, block_data.get("transformation_type", "to_string"), fields=block_data.get("fields", ""), x=x, y=y)
             elif b_type == "STRING_BUILDER":
@@ -131,9 +139,9 @@ class Project:
             elif b_type == "WAIT":
                 block = WaitBlock(name, delay=block_data.get("delay", 1.0), x=x, y=y)
             elif b_type == "DIALOGUE":
-                block = DialogueBlock(name, message=block_data.get("message", ""), x=x, y=y)
-            elif b_type == "GET_KEY":
-                block = GetKeyBlock(name, x=x, y=y)
+                block = DialogueBlock(name, x=x, y=y)
+            elif b_type == "LOOP":
+                block = LoopBlock(name, x=x, y=y)
             
             if block:
                 # Restore base properties

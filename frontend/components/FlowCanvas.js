@@ -17,7 +17,8 @@ const FlowCanvas = () => {
         fetchApiSchemas,
         toggleMenu,
         addBlock,
-        setHoveredNodeId
+        setHoveredNodeId,
+        onSelectionChange
     } = useStore();
     const {screenToFlowPosition} = useReactFlow();
     // Define our custom node type
@@ -71,6 +72,7 @@ const FlowCanvas = () => {
             onNodeContextMenu={handleNodeContextMenu}
             onDrop={onDrop}
             onDragOver={onDragOver}
+            onSelectionChange={onSelectionChange}
             onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
             onNodeMouseLeave={() => setHoveredNodeId(null)}
             connectionLineType="straight"

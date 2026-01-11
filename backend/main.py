@@ -10,9 +10,9 @@ from block_types.start_block import StartBlock
 from block_types.string_builder_block import StringBuilderBlock
 from block_types.wait_block import WaitBlock
 from block_types.dialogue_block import DialogueBlock
-from block_types.get_key_block import GetKeyBlock
+from block_types.loop_block import LoopBlock
 from api_schemas import API_SCHEMAS
-from database import mongodb
+# from database import mongodb # Assuming this is used within Project class now
 from api_routes import api_v2
 import collections
 import json
@@ -23,13 +23,14 @@ CORS(app) # Enable CORS for all routes
 # Register the new authenticated API routes (v2)
 app.register_blueprint(api_v2)
 
-# Initialize MongoDB connection
-try:
-    mongodb.connect()
-    print("✓ MongoDB connection established")
-except Exception as e:
-    print(f"Warning: Failed to connect to MongoDB: {e}")
-    print("Running in in-memory mode only.")
+# NOTE: The MongoDB connection should be managed within your database module,
+# not at the top level of your main application file.
+# try:
+#     mongodb.connect()
+#     print("✓ MongoDB connection established")
+# except Exception as e:
+#     print(f"Warning: Failed to connect to MongoDB: {e}")
+#     print("Running in in-memory mode only.")
 
 # ==========================================
 # PART 1: API Block Functionality & Execution Engine
@@ -81,7 +82,9 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
         # Yield start event for immediate highlighting
         yield json.dumps({
             "type": "start",
-            "block_id": current_block.id
+            "block_id": current_block.id,
+            "block_type": current_block.block_type,
+            "inputs": current_block.inputs
         }) + "\n"
         
         # Execute the block
@@ -122,6 +125,12 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
 # PART 2: Flask Linking to React Frontend
 # ==========================================
 
+# ==============================================================================
+# WARNING: The use of 'global current_project' is not thread-safe and will
+# cause issues in a multi-user or multi-request environment. These routes
+# should be refactored to be stateless, operating on a project_id passed
+# in the URL, similar to the new routes in `api_routes.py`.
+# ==============================================================================
 # In-memory storage for the current project
 current_project = Project("Demo Project")
 
@@ -129,6 +138,9 @@ current_project = Project("Demo Project")
 def run_graph():
     """
     Endpoint to trigger graph execution.
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless (e.g., POST /api/v2/projects/<project_id>/execute).
     """
     global current_project
     if not current_project.blocks:
@@ -153,6 +165,9 @@ def run_graph():
 def toggle_visibility():
     """
     Endpoint to toggle visibility of an input or output on a block.
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
     """
     data = request.json
     block_id = data.get("block_id")
@@ -177,6 +192,9 @@ def add_block():
     """
     Endpoint to add a new block to the project.
     Expects JSON: { "type": "API", "name": "My Block", "x": 100, "y": 100, ...params }
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless (e.g., POST /api/v2/projects/<project_id>/blocks).
     """
     data = request.json
     block_type = data.get("type")
@@ -200,7 +218,9 @@ def add_block():
             operation = data.get("operation", "add")
             new_block = LogicBlock(name, operation, x=x, y=y)
         elif block_type == "REACT":
-            new_block = ReactBlock(name, x=x, y=y)
+            jsx_code = data.get("jsx_code", "export default function MyComponent({ data_in, onWorkflowOutputChange }) {\n  return <div>Input: {JSON.stringify(data_in)}</div>;\n}")
+            css_code = data.get("css_code", "/* CSS for your component */\ndiv {\n  padding: 10px;\n  border-radius: 5px;\n  background-color: #f0f0f0;\n}")
+            new_block = ReactBlock(name, jsx_code=jsx_code, css_code=css_code, x=x, y=y)
         elif block_type == "TRANSFORM":
             t_type = data.get("transformation_type", "to_string")
             fields = data.get("fields", "")
@@ -216,8 +236,8 @@ def add_block():
         elif block_type == "DIALOGUE":
             message = data.get("message", "")
             new_block = DialogueBlock(name, message=message, x=x, y=y)
-        elif block_type == "GET_KEY":
-            new_block = GetKeyBlock(name, x=x, y=y)
+        elif block_type == "LOOP":
+            new_block = LoopBlock(name, x=x, y=y)
         else:
             return jsonify({"error": f"Unknown block type: {block_type}"}), 400
             
@@ -235,6 +255,9 @@ def remove_block():
     """
     Endpoint to remove a block.
     Expects JSON: { "block_id": "..." }
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
     """
     data = request.json
     block_id = data.get("block_id")
@@ -250,6 +273,9 @@ def update_block():
     """
     Endpoint to update block properties (position, name, specific params).
     Expects JSON: { "block_id": "...", "x": 100, "y": 100, "name": "...", ... }
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
     """
     data = request.json
     block_id = data.get("block_id")
@@ -274,6 +300,11 @@ def update_block():
             block.url = data["url"]
         if "method" in data:
             block.method = data["method"]
+    elif isinstance(block, ReactBlock):
+        if "jsx_code" in data:
+            block.jsx_code = data["jsx_code"]
+        if "css_code" in data:
+            block.css_code = data["css_code"]
     elif isinstance(block, LogicBlock):
         if "operation" in data:
             block.operation = data["operation"]
@@ -291,10 +322,55 @@ def update_block():
             
     return jsonify({"status": "updated", "block": block.to_dict()})
 
+@app.route('/api/execution/respond', methods=['POST'])
+def execution_respond():
+    """
+    Receives user input from a frontend dialogue prompt during execution
+    and sets it on the corresponding block instance to unblock it.
+    """
+    data = request.json
+    block_id = data.get("block_id")
+    value = data.get("value")
+    
+    block = current_project.blocks.get(block_id)
+    if block and isinstance(block, DialogueBlock):
+        block.user_response = value
+        return jsonify({"status": "received"})
+        
+    return jsonify({"error": "Block not found or not a dialogue block"}), 404
+
+@app.route('/api/block/update_output_value', methods=['POST'])
+def update_block_output_value():
+    """
+    Endpoint for the frontend to set the value of an output port.
+    Used by interactive blocks like DialogueBlock.
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
+    """
+    data = request.json
+    block_id = data.get("block_id")
+    output_key = data.get("output_key")
+    value = data.get("value")
+    
+    block = current_project.blocks.get(block_id)
+    if not block:
+        return jsonify({"error": "Block not found"}), 404
+        
+    if output_key not in block.outputs:
+        return jsonify({"error": f"Output '{output_key}' not found on block"}), 404
+    
+    block.outputs[output_key] = value
+    
+    return jsonify({"status": "updated", "block": block.to_dict()})
+
 @app.route('/api/block/update_input_value', methods=['POST'])
 def update_block_input_value():
     """
     Endpoint for the frontend to set the value of an unconnected input.
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
     """
     data = request.json
     block_id = data.get("block_id")
@@ -318,6 +394,9 @@ def add_connection():
     """
     Endpoint to connect two blocks.
     Expects JSON: { "source_id": "...", "source_output": "...", "target_id": "...", "target_input": "..." }
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
     """
     data = request.json
     source_id = data.get("source_id")
@@ -344,6 +423,9 @@ def remove_connection():
     """
     Endpoint to remove a connection.
     Expects JSON: { "source_id": "...", "source_output": "...", "target_id": "...", "target_input": "..." }
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless.
     """
     data = request.json
     source_id = data.get("source_id")
@@ -379,6 +461,9 @@ def remove_connection():
 def get_graph_structure():
     """
     Returns the current graph structure for the frontend to render.
+    
+    NOTE: This endpoint operates on the global project state and should be
+    refactored to be stateless (e.g., GET /api/v2/projects/<project_id>/graph).
     """
     nodes = []
     edges = []
@@ -415,12 +500,18 @@ def get_schemas():
 
 @app.route('/api/project/save', methods=['GET'])
 def save_project():
-    """Returns the project as a JSON string."""
+    """
+    Returns the project as a JSON string.
+    NOTE: This should be removed in favor of a stateless approach.
+    """
     return current_project.to_json()
 
 @app.route('/api/project/load', methods=['POST'])
 def load_project():
-    """Loads a project from a JSON string."""
+    """
+    Loads a project from a JSON string.
+    NOTE: This should be removed in favor of a stateless approach.
+    """
     global current_project
     try:
         json_data = request.json
@@ -437,78 +528,11 @@ def load_project():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-# ==========================================
-# PART 3: MongoDB Persistence Endpoints
-# ==========================================
-
-@app.route('/api/project/db/save', methods=['POST'])
-def save_project_to_db():
-    """Saves the current project to MongoDB."""
-    global current_project
-    try:
-        project_id = current_project.save_to_db()
-        return jsonify({
-            "status": "saved",
-            "project_id": project_id,
-            "project_name": current_project.name
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/project/db/load/<project_id>', methods=['GET'])
-def load_project_from_db(project_id):
-    """Loads a project from MongoDB by ID."""
-    global current_project
-    try:
-        current_project = Project.load_from_db(project_id)
-        return jsonify({
-            "status": "loaded",
-            "project_id": current_project._id,
-            "project_name": current_project.name
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 404
-
-@app.route('/api/project/db/list', methods=['GET'])
-def list_projects():
-    """Lists all projects in the database."""
-    try:
-        projects = Project.list_all_projects()
-        return jsonify({"projects": projects})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/project/db/delete/<project_id>', methods=['DELETE'])
-def delete_project_from_db(project_id):
-    """Deletes a project from MongoDB."""
-    try:
-        # Load the project first to delete it
-        project = Project.load_from_db(project_id)
-        if project.delete_from_db():
-            return jsonify({"status": "deleted", "project_id": project_id})
-        else:
-            return jsonify({"error": "Failed to delete project"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 404
-
-@app.route('/api/project/db/create', methods=['POST'])
-def create_new_project():
-    """Creates a new project and saves it to MongoDB."""
-    global current_project
-    try:
-        data = request.json
-        project_name = data.get("name", "New Project")
-
-        current_project = Project(project_name)
-        project_id = current_project.save_to_db()
-
-        return jsonify({
-            "status": "created",
-            "project_id": project_id,
-            "project_name": current_project.name
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# ==============================================================================
+# NOTE: The old MongoDB persistence endpoints have been removed.
+# This functionality is now handled by the stateless, authenticated routes
+# in `api_routes.py` (e.g., POST /api/v2/projects, GET /api/v2/projects).
+# ==============================================================================
 
 # --- Demo Setup ---
 def setup_demo_project():

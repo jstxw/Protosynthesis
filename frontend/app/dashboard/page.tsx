@@ -6,10 +6,6 @@ import {
   Search,
   Plus,
   ChevronDown,
-  MoreVertical,
-  ArrowRight,
-  Link2,
-  Clock,
   LogOut,
   CreditCard,
   Mail,
@@ -198,230 +194,102 @@ function NewProjectModal({
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const categories = ['All', 'AI', 'Payment', 'Productivity', 'Database'];
+  const categories = ['All', 'Payment', 'Email', 'Database', 'AI', 'Messaging', 'Integration'];
 
   const templates = [
     {
-      id: 'ai-content-generator',
-      name: 'AI Content Generator',
-      description: 'Generate content with Claude AI and post to social media channels',
+      id: 'stripe-airtable',
+      name: 'Stripe → Airtable',
+      description: 'Log successful payments from Stripe to Airtable for tracking and analytics',
       complexity: 'simple' as const,
-      nodeCount: 4,
-      edgeCount: 3,
-      category: 'AI',
-      icon: Sparkles,
-      color: '#10A37F',
-    },
-    {
-      id: 'payment-notification',
-      name: 'Payment → Notification',
-      description: 'Process Stripe payments and send confirmation via Slack + Email',
-      complexity: 'simple' as const,
-      nodeCount: 4,
-      edgeCount: 3,
+      nodeCount: 2,
+      edgeCount: 1,
       category: 'Payment',
       icon: CreditCard,
       color: '#635BFF',
     },
     {
-      id: 'ai-assistant-sms',
-      name: 'AI Assistant via SMS',
-      description: 'Receive questions via Telegram, process with Gemini, respond via Twilio SMS',
+      id: 'stripe-sendgrid-airtable',
+      name: 'Stripe → SendGrid → Airtable',
+      description: 'Process payments, send confirmation emails, and log to database',
       complexity: 'medium' as const,
-      nodeCount: 5,
-      edgeCount: 4,
+      nodeCount: 3,
+      edgeCount: 2,
+      category: 'Payment',
+      icon: CreditCard,
+      color: '#635BFF',
+    },
+    {
+      id: 'webhook-openai-email',
+      name: 'Webhook → OpenAI → Email',
+      description: 'Receive webhooks, process with AI, and send email responses',
+      complexity: 'medium' as const,
+      nodeCount: 3,
+      edgeCount: 2,
       category: 'AI',
-      icon: MessageSquare,
+      icon: Sparkles,
       color: '#10A37F',
     },
     {
-      id: 'task-automation',
-      name: 'Task Automation Hub',
-      description: 'Create tasks in Todoist, sync to Google Calendar, and notify via Discord',
-      complexity: 'medium' as const,
-      nodeCount: 5,
-      edgeCount: 4,
-      category: 'Productivity',
-      icon: Database,
-      color: '#18BFFF',
+      id: 'form-sheets-sendgrid',
+      name: 'Form → Sheets → SendGrid',
+      description: 'Capture form submissions, store in Google Sheets, send notifications',
+      complexity: 'simple' as const,
+      nodeCount: 3,
+      edgeCount: 2,
+      category: 'Email',
+      icon: Mail,
+      color: '#1A82E2',
     },
     {
-      id: 'data-pipeline',
-      name: 'Data Collection Pipeline',
-      description: 'Fetch data from APIs, store in MongoDB, analyze with AI, export to Sheets',
+      id: 'airtable-openai-twilio',
+      name: 'Airtable → OpenAI → Twilio',
+      description: 'Fetch records, generate AI responses, send SMS notifications',
+      complexity: 'medium' as const,
+      nodeCount: 3,
+      edgeCount: 2,
+      category: 'AI',
+      icon: Sparkles,
+      color: '#10A37F',
+    },
+    {
+      id: 'webhook-multi-api',
+      name: 'Multi-API Integration',
+      description: 'Complex workflow connecting multiple APIs with conditional routing',
       complexity: 'complex' as const,
       nodeCount: 6,
-      edgeCount: 5,
+      edgeCount: 7,
+      category: 'Integration',
+      icon: Globe,
+      color: '#6366F1',
+    },
+    {
+      id: 'crm-sync',
+      name: 'CRM Data Sync',
+      description: 'Sync customer data between multiple platforms automatically',
+      complexity: 'complex' as const,
+      nodeCount: 5,
+      edgeCount: 6,
       category: 'Database',
       icon: Database,
       color: '#18BFFF',
     },
     {
-      id: 'image-generation',
-      name: 'AI Image Generator',
-      description: 'Generate images with Stability AI and share via multiple channels',
-      complexity: 'simple' as const,
-      nodeCount: 4,
-      edgeCount: 3,
-      category: 'AI',
-      icon: Sparkles,
-      color: '#10A37F',
-    },
-    {
-      id: 'voice-content',
-      name: 'Voice Content Creator',
-      description: 'Generate text with AI, convert to speech with ElevenLabs, share results',
-      complexity: 'medium' as const,
+      id: 'notification-hub',
+      name: 'Notification Hub',
+      description: 'Central notification system with email, SMS, and push notifications',
+      complexity: 'complex' as const,
       nodeCount: 5,
       edgeCount: 4,
-      category: 'AI',
-      icon: Sparkles,
-      color: '#10A37F',
-    },
-    {
-      id: 'multi-payment',
-      name: 'Multi-Payment Processor',
-      description: 'Handle payments from Stripe & PayPal, log to database, send receipts',
-      complexity: 'complex' as const,
-      nodeCount: 7,
-      edgeCount: 6,
-      category: 'Payment',
-      icon: CreditCard,
-      color: '#635BFF',
+      category: 'Messaging',
+      icon: MessageSquare,
+      color: '#F22F46',
     },
   ];
 
   const filteredTemplates = selectedCategory === 'All'
     ? templates
     : templates.filter(t => t.category === selectedCategory);
-
-  // Generate workflow data from template
-  const generateTemplateWorkflow = (templateId: string) => {
-    const templates: Record<string, { nodes: any[], edges: any[] }> = {
-      'ai-content-generator': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'Anthropic Claude API', schema_key: 'anthropic_claude', inputs: {}, outputs: { text: { type: 'string' }, response: { type: 'json' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 50 }, data: { type: 'API', name: 'Slack Webhook', schema_key: 'slack_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 700, y: 200 }, data: { type: 'DIALOGUE', name: 'Display Result', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'text', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-2', target: 'node-4', sourceHandle: 'text', targetHandle: 'message' },
-        ]
-      },
-      'payment-notification': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'Stripe', schema_key: 'stripe_charge', inputs: {}, outputs: { id: { type: 'string' }, status: { type: 'string' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 50 }, data: { type: 'API', name: 'Slack Webhook', schema_key: 'slack_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 700, y: 200 }, data: { type: 'API', name: 'Discord Webhook', schema_key: 'discord_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'id', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-2', target: 'node-4', sourceHandle: 'id', targetHandle: 'input' },
-        ]
-      },
-      'ai-assistant-sms': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'Telegram Bot API', schema_key: 'telegram_bot', inputs: {}, outputs: { message_id: { type: 'number' }, response: { type: 'json' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 100 }, data: { type: 'API', name: 'Google Gemini API', schema_key: 'google_gemini', inputs: {}, outputs: { text: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 1000, y: 100 }, data: { type: 'API', name: 'Twilio Send SMS', schema_key: 'twilio_sms', inputs: {}, outputs: { sid: { type: 'string' } } } },
-          { id: 'node-5', type: 'customNode', position: { x: 1300, y: 100 }, data: { type: 'DIALOGUE', name: 'Show Response', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'response', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-3', target: 'node-4', sourceHandle: 'text', targetHandle: 'input' },
-          { id: 'edge-4', source: 'node-4', target: 'node-5', sourceHandle: 'sid', targetHandle: 'message' },
-        ]
-      },
-      'task-automation': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'Todoist', schema_key: 'todoist', inputs: {}, outputs: { id: { type: 'string' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 100 }, data: { type: 'API', name: 'Google Calendar', schema_key: 'google_calendar', inputs: {}, outputs: { id: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 1000, y: 100 }, data: { type: 'API', name: 'Discord Webhook', schema_key: 'discord_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-          { id: 'node-5', type: 'customNode', position: { x: 1300, y: 100 }, data: { type: 'DIALOGUE', name: 'Confirm', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'id', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-3', target: 'node-4', sourceHandle: 'id', targetHandle: 'input' },
-          { id: 'edge-4', source: 'node-4', target: 'node-5', sourceHandle: 'status', targetHandle: 'message' },
-        ]
-      },
-      'data-pipeline': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'Cat Fact', schema_key: 'cat_fact', inputs: {}, outputs: { fact: { type: 'string' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 100 }, data: { type: 'API', name: 'MongoDB Atlas Find One', schema_key: 'mongodb_find', inputs: {}, outputs: { document: { type: 'json' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 1000, y: 100 }, data: { type: 'API', name: 'Hugging Face Inference', schema_key: 'huggingface', inputs: {}, outputs: { generated_text: { type: 'string' } } } },
-          { id: 'node-5', type: 'customNode', position: { x: 1300, y: 100 }, data: { type: 'API', name: 'Google Sheets', schema_key: 'google_sheets', inputs: {}, outputs: { updates: { type: 'json' } } } },
-          { id: 'node-6', type: 'customNode', position: { x: 1600, y: 100 }, data: { type: 'DIALOGUE', name: 'Complete', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'fact', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-3', target: 'node-4', sourceHandle: 'document', targetHandle: 'input' },
-          { id: 'edge-4', source: 'node-4', target: 'node-5', sourceHandle: 'generated_text', targetHandle: 'input' },
-          { id: 'edge-5', source: 'node-5', target: 'node-6', sourceHandle: 'updates', targetHandle: 'message' },
-        ]
-      },
-      'image-generation': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'Stability AI', schema_key: 'stability_ai', inputs: {}, outputs: { image_base64: { type: 'string' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 50 }, data: { type: 'API', name: 'Slack Webhook', schema_key: 'slack_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 700, y: 200 }, data: { type: 'DIALOGUE', name: 'Display', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'image_base64', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-2', target: 'node-4', sourceHandle: 'image_base64', targetHandle: 'message' },
-        ]
-      },
-      'voice-content': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 100 }, data: { type: 'API', name: 'OpenAI Responses API', schema_key: 'openai_chat', inputs: {}, outputs: { message_text: { type: 'string' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 700, y: 100 }, data: { type: 'API', name: 'ElevenLabs TTS', schema_key: 'elevenlabs', inputs: {}, outputs: { audio_base64: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 1000, y: 50 }, data: { type: 'API', name: 'Slack Webhook', schema_key: 'slack_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-          { id: 'node-5', type: 'customNode', position: { x: 1000, y: 200 }, data: { type: 'DIALOGUE', name: 'Result', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-2', target: 'node-3', sourceHandle: 'message_text', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-3', target: 'node-4', sourceHandle: 'audio_base64', targetHandle: 'input' },
-          { id: 'edge-4', source: 'node-3', target: 'node-5', sourceHandle: 'audio_base64', targetHandle: 'message' },
-        ]
-      },
-      'multi-payment': {
-        nodes: [
-          { id: 'node-1', type: 'customNode', position: { x: 100, y: 100 }, data: { type: 'START', name: 'Start', inputs: {}, outputs: { trigger: { type: 'trigger' } } } },
-          { id: 'node-2', type: 'customNode', position: { x: 400, y: 50 }, data: { type: 'API', name: 'Stripe', schema_key: 'stripe_charge', inputs: {}, outputs: { id: { type: 'string' }, status: { type: 'string' } } } },
-          { id: 'node-3', type: 'customNode', position: { x: 400, y: 200 }, data: { type: 'API', name: 'PayPal', schema_key: 'paypal_payment', inputs: {}, outputs: { id: { type: 'string' }, status: { type: 'string' } } } },
-          { id: 'node-4', type: 'customNode', position: { x: 700, y: 100 }, data: { type: 'API', name: 'Airtable', schema_key: 'airtable_list', inputs: {}, outputs: { records: { type: 'json' } } } },
-          { id: 'node-5', type: 'customNode', position: { x: 1000, y: 50 }, data: { type: 'API', name: 'Slack Webhook', schema_key: 'slack_webhook', inputs: {}, outputs: { status: { type: 'string' } } } },
-          { id: 'node-6', type: 'customNode', position: { x: 1000, y: 150 }, data: { type: 'API', name: 'Notion API', schema_key: 'notion_page', inputs: {}, outputs: { id: { type: 'string' }, url: { type: 'string' } } } },
-          { id: 'node-7', type: 'customNode', position: { x: 1300, y: 100 }, data: { type: 'DIALOGUE', name: 'Receipt', inputs: { message: { type: 'string' } }, outputs: {} } },
-        ],
-        edges: [
-          { id: 'edge-1', source: 'node-1', target: 'node-2', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-2', source: 'node-1', target: 'node-3', sourceHandle: 'trigger', targetHandle: 'input' },
-          { id: 'edge-3', source: 'node-2', target: 'node-4', sourceHandle: 'id', targetHandle: 'input' },
-          { id: 'edge-4', source: 'node-3', target: 'node-4', sourceHandle: 'id', targetHandle: 'input' },
-          { id: 'edge-5', source: 'node-4', target: 'node-5', sourceHandle: 'records', targetHandle: 'input' },
-          { id: 'edge-6', source: 'node-4', target: 'node-6', sourceHandle: 'records', targetHandle: 'input' },
-        ]
-      },
-    };
-
-    return templates[templateId] || { nodes: [], edges: [] };
-  };
 
   const handleCreate = async () => {
     if (!projectName.trim()) {
@@ -440,19 +308,10 @@ function NewProjectModal({
 
       console.log('✅ Project created:', project);
 
-      // Get workflow data from template or use empty
-      let workflowData = { nodes: [], edges: [] };
-      if (mode === 'template' && selectedTemplate) {
-        workflowData = generateTemplateWorkflow(selectedTemplate);
-        console.log('📋 Using template:', selectedTemplate, workflowData);
-      }
-
       // Create a workflow in the project
       const workflow = await workflowService.createWorkflow(project.project_id, {
-        name: mode === 'template' && selectedTemplate
-          ? templates.find(t => t.id === selectedTemplate)?.name || 'Main Workflow'
-          : 'Main Workflow',
-        data: workflowData
+        name: 'Main Workflow',
+        data: { nodes: [], edges: [] }
       });
 
       console.log('✅ Workflow created:', workflow);

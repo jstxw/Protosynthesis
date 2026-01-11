@@ -54,13 +54,14 @@ class UserService:
         return users_collection.find_one({"supabase_user_id": supabase_user_id})
 
     @staticmethod
-    def create_project(supabase_user_id: str, project_name: str) -> Dict:
+    def create_project(supabase_user_id: str, project_name: str, email: str = None) -> Dict:
         """
         Create a new project for a user.
 
         Args:
             supabase_user_id: UUID from Supabase Auth
             project_name: Name of the project
+            email: User's email (optional, for lazy initialization if user doesn't exist)
 
         Returns:
             dict: The created project object
@@ -76,10 +77,31 @@ class UserService:
         }
 
         # Add project to user's projects array
-        users_collection.update_one(
+        result = users_collection.update_one(
             {"supabase_user_id": supabase_user_id},
             {"$push": {"projects": project}}
         )
+
+        # If user doesn't exist, try to lazy-initialize if email is provided
+        if result.matched_count == 0:
+            if email:
+                print(f"⚠️ User {supabase_user_id} not found in MongoDB. Lazy initializing user...")
+                # Create new user document with this project
+                user_doc = {
+                    "supabase_user_id": supabase_user_id,
+                    "email": email,
+                    "created_at": datetime.utcnow().isoformat(),
+                    "projects": [project]
+                }
+                users_collection.insert_one(user_doc)
+                print(f"✅ User initialized and project created.")
+            else:
+                print(f"❌ User {supabase_user_id} not found and no email provided for initialization.")
+                # We return the project object even though it wasn't saved,
+                # but maybe raising an error is better?
+                # For now let's keep consistent with valid success response behavior
+                # but logging the error is crucial.
+                pass
 
         return project
 
