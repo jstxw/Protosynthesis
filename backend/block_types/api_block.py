@@ -34,7 +34,7 @@ class APIBlock(Block):
         super().__init__(name, block_type="API", x=x, y=y)
         
         # Add a trigger input to ensure execution is always intentional
-        self.register_input("trigger", data_type="any", hidden=True)
+        self.register_input("trigger", data_type="any", hidden=False)
 
         # Core outputs that are always present
         self.register_output("response_json", data_type="json")
