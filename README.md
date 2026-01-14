@@ -10,11 +10,11 @@ A powerful no-code platform for building, designing, and executing complex API w
 
 ---
 
-![Screenshot 0](Protosynthesis/media/image_0.png)
+![Screenshot 0](media/image_0.png)
 
-![Screenshot 1](Protosynthesis/media/image_1.png)
+![Screenshot 1](media/image_1.png)
 
-![Screenshot 2](Protosynthesis/media/image_2.png)
+![Screenshot 2](media/image_2.png)
 
 ## Overview
 
