@@ -10,15 +10,17 @@ import '../auth.css';
  * Signup Page Component
  *
  * Features:
- * - Username/password registration via Supabase
+ * - Email/password registration via Supabase
+ * - Optional username/display name
  * - Social login options (Google, GitHub)
  * - Password visibility toggle
- * - Password confirmation
+ * - Password confirmation with validation
  * - Error handling
  * - Node-based visual design
  */
 export function SignUp() {
     const { signUp } = useAuth();
+    const [email, setEmail] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,17 +33,27 @@ export function SignUp() {
         e.preventDefault();
         setError('');
 
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters long.');
             return;
         }
 
         setIsLoading(true);
 
         try {
-            // Generate email from username for Supabase (internal use only)
-            const generatedEmail = `${username}@nodelink.app`;
-            await signUp(generatedEmail, password, username);
+            await signUp(email, password, username || undefined);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to create an account. Please try again.');
         } finally {
@@ -68,17 +80,32 @@ export function SignUp() {
                     </header>
 
                     <main className="auth-body">
-                        {/* Username Port */}
+                        {/* Email Port */}
                         <div className="auth-port output">
                             <div className="auth-port-content">
-                                <label htmlFor="username">Username</label>
+                                <label htmlFor="email">Email</label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="your.email@example.com"
+                                    required
+                                />
+                            </div>
+                            <div className="auth-port-handle connected"></div>
+                        </div>
+
+                        {/* Username Port (Optional) */}
+                        <div className="auth-port output">
+                            <div className="auth-port-content">
+                                <label htmlFor="username">Username (Optional)</label>
                                 <input
                                     id="username"
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Choose a username"
-                                    required
+                                    placeholder="Choose a display name"
                                 />
                             </div>
                             <div className="auth-port-handle connected"></div>
@@ -146,12 +173,14 @@ export function SignUp() {
                     pointerEvents: 'none',
                     zIndex: 0
                 }}>
-                    {/* Username line */}
+                    {/* Email line */}
                     <line className="auth-connector-line" x1="280" y1="90" x2="320" y2="90" />
-                    {/* Password line */}
+                    {/* Username line */}
                     <line className="auth-connector-line" x1="280" y1="130" x2="320" y2="130" />
-                    {/* Confirm Password line */}
+                    {/* Password line */}
                     <line className="auth-connector-line" x1="280" y1="170" x2="320" y2="170" />
+                    {/* Confirm Password line */}
+                    <line className="auth-connector-line" x1="280" y1="210" x2="320" y2="210" />
                 </svg>
 
                 {/* Create Account Node (Right) */}
@@ -173,6 +202,17 @@ export function SignUp() {
                         )}
 
                         <main className="auth-body">
+                            {/* Email Input Port */}
+                            <div className="auth-port input">
+                                <div className="auth-port-handle connected"></div>
+                                <div className="auth-port-content">
+                                    <div className="auth-port-label">
+                                        <span>Email</span>
+                                        <span className="port-type">(string)</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Username Input Port */}
                             <div className="auth-port input">
                                 <div className="auth-port-handle connected"></div>

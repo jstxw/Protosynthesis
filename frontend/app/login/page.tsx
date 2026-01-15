@@ -10,7 +10,7 @@ import '../auth.css'
  * Login Page Component
  *
  * Features:
- * - Username/password authentication via Supabase
+ * - Email/password authentication via Supabase
  * - Social login options (Google, GitHub)
  * - Password visibility toggle
  * - Error handling
@@ -18,7 +18,7 @@ import '../auth.css'
  */
 export function Login() {
     const { signIn } = useAuth();
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -30,9 +30,7 @@ export function Login() {
         setIsLoading(true);
 
         try {
-            // Generate email from username for Supabase (internal use only)
-            const generatedEmail = `${username}@nodelink.app`;
-            await signIn(generatedEmail, password);
+            await signIn(email, password);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to sign in. Please check your credentials.');
         } finally {
@@ -59,16 +57,16 @@ export function Login() {
                     </header>
 
                     <main className="auth-body">
-                        {/* Username Port */}
+                        {/* Email Port */}
                         <div className="auth-port output">
                             <div className="auth-port-content">
-                                <label htmlFor="username">Username</label>
+                                <label htmlFor="email">Email</label>
                                 <input
-                                    id="username"
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="johndoe"
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="your.email@example.com"
                                     required
                                 />
                             </div>
@@ -112,9 +110,9 @@ export function Login() {
                     pointerEvents: 'none',
                     zIndex: 0
                 }}>
-                    {/* Username line - header(36) + margin-top(30) + body-padding(10) + first-port-middle(~20) */}
+                    {/* Email line - header(36) + margin-top(30) + body-padding(10) + first-port-middle(~20) */}
                     <line className="auth-connector-line" x1="280" y1="96" x2="320" y2="96" />
-                    {/* Password line - username + port-height(~40) */}
+                    {/* Password line - email + port-height(~40) */}
                     <line className="auth-connector-line" x1="280" y1="136" x2="320" y2="136" />
                 </svg>
 
@@ -137,12 +135,12 @@ export function Login() {
                         )}
 
                         <main className="auth-body">
-                            {/* Username Input Port */}
+                            {/* Email Input Port */}
                             <div className="auth-port input">
                                 <div className="auth-port-handle connected"></div>
                                 <div className="auth-port-content">
                                     <div className="auth-port-label">
-                                        <span>Username</span>
+                                        <span>Email</span>
                                         <span className="port-type">(string)</span>
                                     </div>
                                 </div>

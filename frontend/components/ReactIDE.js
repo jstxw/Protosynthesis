@@ -30,21 +30,36 @@ const ReactIDE = () => {
         }
     }, [monaco, editorTheme]);
 
+    // Helper to convert inputs/outputs to array format
+    const toPortArray = (portsData, metaData) => {
+        if (Array.isArray(portsData)) return portsData;
+        if (typeof portsData === 'object' && portsData !== null) {
+            return Object.entries(portsData).map(([key, value]) => ({
+                key,
+                value,
+                data_type: metaData?.[key]?.type || 'any'
+            }));
+        }
+        return [];
+    };
+
     // Compute props for the React preview by resolving connections. If an input is connected,
     // use the source node's output value; otherwise fall back to the input.value stored on the node.
     const previewProps = React.useMemo(() => {
         if (!reactNode) return {};
 
         const props = {};
+        const inputsArray = toPortArray(reactNode.data.inputs, reactNode.data.input_meta);
 
-        (reactNode.data.inputs || []).forEach(input => {
+        inputsArray.forEach(input => {
             // Find an edge that connects into this input
             const incoming = edges.find(e => e.target === reactNode.id && e.targetHandle === input.key);
             if (incoming) {
                 // find source node
                 const src = nodes.find(n => n.id === incoming.source);
                 if (src) {
-                    const out = (src.data.outputs || []).find(o => o.key === incoming.sourceHandle);
+                    const outputsArray = toPortArray(src.data.outputs, src.data.output_meta);
+                    const out = outputsArray.find(o => o.key === incoming.sourceHandle);
                     props[input.key] = out?.value;
                 } else {
                     props[input.key] = input.value;
@@ -140,8 +155,20 @@ const ReactIDE = () => {
             });
 
             // Compare with current ports to avoid unnecessary updates
-            const currentInputs = selectedNode.data?.inputs || [];
-            const currentOutputs = selectedNode.data?.outputs || [];
+            const currentInputsData = selectedNode.data?.inputs;
+            const currentOutputsData = selectedNode.data?.outputs;
+
+            // Convert to array format for comparison
+            const currentInputs = Array.isArray(currentInputsData)
+                ? currentInputsData
+                : (typeof currentInputsData === 'object' && currentInputsData !== null)
+                    ? Object.keys(currentInputsData).map(key => ({ key }))
+                    : [];
+            const currentOutputs = Array.isArray(currentOutputsData)
+                ? currentOutputsData
+                : (typeof currentOutputsData === 'object' && currentOutputsData !== null)
+                    ? Object.keys(currentOutputsData).map(key => ({ key }))
+                    : [];
 
             const inputsChanged = JSON.stringify(newInputs.map(i => i.key).sort()) !== JSON.stringify(currentInputs.map(i => i.key).sort());
             const outputsChanged = JSON.stringify(newOutputs.map(o => o.key).sort()) !== JSON.stringify(currentOutputs.map(o => o.key).sort());

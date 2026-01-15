@@ -9,6 +9,141 @@ import { apiClient } from '../services/api';
 
 const API_URL = 'http://localhost:5001/api';
 
+// Helper to generate unique IDs
+const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Helper to initialize block data locally (no backend call needed)
+const initializeBlockData = (type, params = {}) => {
+    const id = generateId();
+    const baseBlock = {
+        id,
+        name: params.name || `New ${type} Block`,
+        block_type: type,
+        type, // Ensure both are set
+        x: params.x || 150,
+        y: params.y || 150,
+        inputs: {},
+        outputs: {},
+        input_meta: {},
+        output_meta: {},
+        visible_inputs: [],
+        visible_outputs: [],
+        is_collapsed: false,
+        menu_open: false,
+    };
+
+    // Type-specific initialization
+    switch (type) {
+        case 'START':
+            return {
+                ...baseBlock,
+                outputs: { result: null },
+                output_meta: { result: { type: 'any', label: 'Start' } },
+                visible_outputs: ['result'],
+            };
+        case 'API':
+            return {
+                ...baseBlock,
+                url: params.url || '',
+                method: params.method || 'GET',
+                schema_key: params.schema_key || 'custom',
+                inputs: { headers: {}, body: '' },
+                outputs: { response: null },
+                input_meta: {
+                    headers: { type: 'object', label: 'Headers' },
+                    body: { type: 'string', label: 'Body' }
+                },
+                output_meta: { response: { type: 'object', label: 'Response' } },
+                visible_inputs: ['headers', 'body'],
+                visible_outputs: ['response'],
+            };
+        case 'LOGIC':
+            return {
+                ...baseBlock,
+                operation: params.operation || 'add',
+                inputs: { a: null, b: null },
+                outputs: { result: null },
+                input_meta: {
+                    a: { type: 'number', label: 'A' },
+                    b: { type: 'number', label: 'B' }
+                },
+                output_meta: { result: { type: 'number', label: 'Result' } },
+                visible_inputs: ['a', 'b'],
+                visible_outputs: ['result'],
+            };
+        case 'TRANSFORM':
+            return {
+                ...baseBlock,
+                transformation_type: params.transformation_type || 'to_string',
+                fields: params.fields || '',
+                inputs: { input: null },
+                outputs: { output: null },
+                input_meta: { input: { type: 'any', label: 'Input' } },
+                output_meta: { output: { type: 'any', label: 'Output' } },
+                visible_inputs: ['input'],
+                visible_outputs: ['output'],
+            };
+        case 'REACT':
+            return {
+                ...baseBlock,
+                jsx_code: params.jsx_code || 'export default function Component() { return <div>Hello</div>; }',
+                css_code: params.css_code || '',
+                inputs: {},
+                outputs: {},
+                input_meta: {},
+                output_meta: {},
+                visible_inputs: [],
+                visible_outputs: [],
+            };
+        case 'STRING_BUILDER':
+            return {
+                ...baseBlock,
+                template: params.template || '',
+                inputs: {},
+                outputs: { result: null },
+                input_meta: {},
+                output_meta: { result: { type: 'string', label: 'Result' } },
+                visible_inputs: [],
+                visible_outputs: ['result'],
+            };
+        case 'WAIT':
+            return {
+                ...baseBlock,
+                delay: params.delay || 1.0,
+                inputs: { input: null },
+                outputs: { output: null },
+                input_meta: { input: { type: 'any', label: 'Input' } },
+                output_meta: { output: { type: 'any', label: 'Output' } },
+                visible_inputs: ['input'],
+                visible_outputs: ['output'],
+            };
+        case 'DIALOGUE':
+            return {
+                ...baseBlock,
+                message: params.message || '',
+                inputs: {},
+                outputs: { response: null },
+                input_meta: {},
+                output_meta: { response: { type: 'string', label: 'Response' } },
+                visible_inputs: [],
+                visible_outputs: ['response'],
+            };
+        case 'API_KEY':
+            return {
+                ...baseBlock,
+                selected_key: params.selected_key || '',
+                inputs: {},
+                outputs: { api_key: null },
+                input_meta: {},
+                output_meta: { api_key: { type: 'string', label: 'API Key' } },
+                visible_inputs: [],
+                visible_outputs: ['api_key'],
+            };
+        default:
+            return baseBlock;
+    }
+};
+
 const createFlowNode = (blockData) => ({
     id: blockData.id,
     type: 'custom',
@@ -67,76 +202,35 @@ export const useStore = create((set, get) => ({
         }
     },
 
-    fetchGraph: async () => {
-        try {
-            const response = await axios.get(`${API_URL}/graph`);
-            const {nodes, edges} = response.data;
-
-            const flowNodes = nodes.map(createFlowNode);
-            set({nodes: flowNodes, edges});
-
-            // Auto-select React node if present
-            const reactNode = flowNodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
-            if (reactNode) {
-                set({ selectedNodeId: reactNode.id });
-            }
-        } catch (error) {
-            console.error("Failed to fetch graph:", error);
-        }
-    },
+    // Removed fetchGraph - use loadWorkflowFromV2 instead
 
     // --- REACT FLOW HANDLERS ---
     onNodesChange: (changes) => {
         set({
             nodes: applyNodeChanges(changes, get().nodes),
         });
+
+        // Trigger auto-save for position changes in V2 mode
         changes.forEach(change => {
             if (change.type === 'position' && change.dragging === false) {
-                // Determine if we are in V2 mode or Legacy mode
-                const { currentProjectId, currentWorkflowId, nodes } = get();
-                // If in V2 mode, we only rely on auto-save (saveWorkflowToV2).
-                // We do NOT call the legacy /block/update endpoint to avoid specific block handling conflicts
-                // or needing to keep 'current_project' in main.py in sync with partial updates.
-                if (!currentProjectId || !currentWorkflowId) {
-                     const node = nodes.find(n => n.id === change.id);
-                     if (node) {
-                         axios.post(`${API_URL}/block/update`, {block_id: change.id, x: node.position.x, y: node.position.y})
-                             .catch(err => console.error("Failed to sync position:", err));
-                     }
+                const { currentProjectId, currentWorkflowId } = get();
+                if (currentProjectId && currentWorkflowId) {
+                    get().scheduleAutoSave();
                 }
             }
         });
-        // Trigger auto-save for v2 workflows
-
     },
 
     onEdgesChange: (changes) => {
-        const removedEdges = changes.filter(c => c.type === 'remove');
-        if (removedEdges.length > 0) {
-            const { currentProjectId, currentWorkflowId, edges } = get();
-
-            // Only use legacy removal if NOT in V2 mode
-            if (!currentProjectId || !currentWorkflowId) {
-                removedEdges.forEach(removedChange => {
-                    const edgeToRemove = edges.find(e => e.id === removedChange.id);
-                    if (edgeToRemove) {
-                        axios.post(`${API_URL}/connection/remove`, {
-                            source_id: edgeToRemove.source,
-                            source_output: edgeToRemove.sourceHandle,
-                            target_id: edgeToRemove.target,
-                            target_input: edgeToRemove.targetHandle,
-                        }).catch(err => {
-                            console.error("Failed to remove connection from backend:", err);
-                            get().fetchGraph();
-                        });
-                    }
-                });
-            }
-        }
         set({
             edges: applyEdgeChanges(changes, get().edges),
         });
-        // Trigger auto-save for v2 workflows
+
+        // Trigger auto-save for edge changes in V2 mode
+        const { currentProjectId, currentWorkflowId } = get();
+        if (currentProjectId && currentWorkflowId && changes.length > 0) {
+            get().scheduleAutoSave();
+        }
     },
 
     onConnect: async (connection) => {
@@ -151,26 +245,11 @@ export const useStore = create((set, get) => ({
             };
         });
 
-        // Only call legacy endpoint if NOT in V2 mode
+        // Trigger auto-save for V2 workflows
         const { currentProjectId, currentWorkflowId } = get();
-        if (!currentProjectId || !currentWorkflowId) {
-            try {
-                await axios.post(`${API_URL}/connection/add`, {
-                    source_id: connection.source,
-                    source_output: connection.sourceHandle,
-                    target_id: connection.target,
-                    target_input: connection.targetHandle,
-                });
-            } catch (error) {
-                console.error("Failed to add connection:", error);
-                set(state => ({
-                    edges: state.edges.filter(e => e.id !== tempEdgeId)
-                }));
-                get().fetchGraph(); // Refresh to restore previous state if needed
-                alert("Failed to create connection. The connection has been rolled back.");
-            }
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
         }
-        // Trigger auto-save for v2 workflows
     },
 
     // --- BLOCK & NODE MANAGEMENT ---
@@ -189,50 +268,42 @@ export const useStore = create((set, get) => ({
             }
         }
 
-        // V2 Mode: Create local node and save entire graph
-        if (currentProjectId && currentWorkflowId) {
-            // In V2 workflow mode we rely on backend-initialized nodes; we don't need a local newNodeId here.
-            // Build minimal node metadata for local creation (we don't reuse it directly here)
-             try {
-                // Use legacy endpoint just to get a properly initialized block structure
-                // But we don't care if it "saves" to the ephemeral current_project
-                const response = await axios.post(`${API_URL}/block/add`, {
-                    type,
-                    name: params.name || `New ${type} Block`,
-                    x: params.x || 150,
-                    y: params.y || 150,
-                    ...params
-                });
-                const initializedBlock = response.data.block;
-                // Force a new ID if needed to ensure uniqueness in V2 context, though backend generated one.
-
-                const flowNode = createFlowNode(initializedBlock);
-                console.log("Adding flowNode (V2 mode):", flowNode); // Added log
-                set(state => ({nodes: [...state.nodes, flowNode]}));
-                get().selectNode(flowNode.id);
-             } catch (error) {
-                 console.error("Failed to init block via backend:", error);
-             }
-             return;
-        }
-
-        // Legacy Mode
         try {
-            const response = await axios.post(`${API_URL}/block/add`, {
-                type,
-                name: params.name || `New ${type} Block`,
-                x: params.x || 150,
-                y: params.y || 150,
-                ...params
-            });
-            const newNodeData = response.data.block;
+            // Helper function to normalize ports
+            const normalizePortsToArray = (portsData, metaData) => {
+                if (Array.isArray(portsData)) return portsData;
+                if (typeof portsData === 'object' && portsData !== null) {
+                    return Object.entries(portsData).map(([key, value]) => ({
+                        key,
+                        value,
+                        data_type: metaData?.[key]?.type || 'any'
+                    }));
+                }
+                return [];
+            };
 
-            const flowNode = createFlowNode(newNodeData);
-            console.log("Adding flowNode (Legacy mode):", flowNode); // Added log
-            set(state => ({nodes: [...state.nodes, flowNode]}));
-            // Trigger auto-save for v2 workflows (if applicable, though we are in legacy block)
-            get().selectNode(flowNode.id);
-            get().scheduleAutoSave();
+            // Create block locally (no backend call needed)
+            const initializedBlock = initializeBlockData(type, params);
+            const flowNode = createFlowNode(initializedBlock);
+
+            // Normalize inputs/outputs to array format (create new object, don't mutate)
+            const normalizedNode = {
+                ...flowNode,
+                data: {
+                    ...flowNode.data,
+                    inputs: normalizePortsToArray(flowNode.data.inputs, flowNode.data.input_meta),
+                    outputs: normalizePortsToArray(flowNode.data.outputs, flowNode.data.output_meta)
+                }
+            };
+
+            console.log("Adding block locally:", normalizedNode);
+            set(state => ({nodes: [...state.nodes, normalizedNode]}));
+            get().selectNode(normalizedNode.id);
+
+            // Auto-save if in V2 mode
+            if (currentProjectId && currentWorkflowId) {
+                get().scheduleAutoSave();
+            }
         } catch (error) {
             console.error("Failed to add block:", error);
         }
@@ -252,88 +323,80 @@ export const useStore = create((set, get) => ({
             })
         }));
 
-        // If Legacy mode, sync to backend endpoint
-        if (!currentProjectId || !currentWorkflowId) {
-            try {
-                await axios.post(`${API_URL}/block/update`, {block_id: nodeId, ...data});
-                // ... legacy logic
-            } catch (error) {
-                console.error("Failed to update node:", error);
-            }
+        // Trigger auto-save in V2 mode
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
         }
     },
 
     updateInputValue: async (nodeId, inputKey, value) => {
+        const { currentProjectId, currentWorkflowId } = get();
+
         // Optimistic update
         set(state => ({
             nodes: state.nodes.map(node => {
                 if (node.id === nodeId) {
-                    const newInputs = (node.data.inputs || []).map(input =>
-                        input.key === inputKey ? {...input, value: value} : input
-                    );
+                    // Handle both array and object format
+                    let newInputs;
+                    if (Array.isArray(node.data.inputs)) {
+                        newInputs = node.data.inputs.map(input =>
+                            input.key === inputKey ? { ...input, value } : input
+                        );
+                    } else {
+                        newInputs = {...(node.data.inputs || {}), [inputKey]: value};
+                    }
                     return {...node, data: {...node.data, inputs: newInputs}};
                 }
                 return node;
             })
         }));
 
-        // Legacy sync
-        const { currentProjectId, currentWorkflowId } = get();
-        if (!currentProjectId || !currentWorkflowId) {
-            try {
-                await axios.post(`${API_URL}/block/update_input_value`, {
-                    block_id: nodeId,
-                    input_key: inputKey,
-                    value: value,
-                });
-            } catch (error) {
-                console.error("Failed to update input value:", error);
-            }
+        // Trigger auto-save in V2 mode
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
         }
     },
 
     updateOutputValue: async (nodeId, outputKey, value) => {
-        try {
-            // Call the new backend endpoint
-            await axios.post(`${API_URL}/block/update_output_value`, {
-                block_id: nodeId,
-                output_key: outputKey,
-                value: value,
-            });
+        const { currentProjectId, currentWorkflowId } = get();
 
-            // Update the local state optimistically
-            set(state => ({
-                nodes: state.nodes.map(node => {
-                    if (node.id === nodeId) {
-                        const newOutputs = node.data.outputs.map(out =>
-                            out.key === outputKey ? { ...out, value: value } : out
+        // Update the local state
+        set(state => ({
+            nodes: state.nodes.map(node => {
+                if (node.id === nodeId) {
+                    // Handle both array and object format
+                    let newOutputs;
+                    if (Array.isArray(node.data.outputs)) {
+                        newOutputs = node.data.outputs.map(output =>
+                            output.key === outputKey ? { ...output, value } : output
                         );
-                        return { ...node, data: { ...node.data, outputs: newOutputs } };
+                    } else {
+                        newOutputs = {...(node.data.outputs || {}), [outputKey]: value};
                     }
-                    return node;
-                })
-            }));
-        } catch (error) {
-            console.error("Failed to update output value:", error);
-            alert("Failed to save user input.");
+                    return { ...node, data: { ...node.data, outputs: newOutputs } };
+                }
+                return node;
+            })
+        }));
+
+        // Trigger auto-save in V2 mode
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
         }
     },
 
     removeBlock: async (nodeId) => {
+        const { currentProjectId, currentWorkflowId } = get();
+
         // Optimistic removal
         set(state => ({
             nodes: state.nodes.filter(n => n.id !== nodeId),
             edges: state.edges.filter(e => e.source !== nodeId && e.target !== nodeId),
         }));
 
-        const { currentProjectId, currentWorkflowId } = get();
-        // Legacy Sync
-        if (!currentProjectId || !currentWorkflowId) {
-            try {
-                await axios.post(`${API_URL}/block/remove`, {block_id: nodeId});
-            } catch (error) {
-                console.error("Failed to remove block:", error);
-            }
+        // Trigger auto-save in V2 mode
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
         }
     },
 
@@ -347,8 +410,11 @@ export const useStore = create((set, get) => ({
                     n.id === nodeId ? {...n, data: {...n.data, menu_open: newMenuState}} : n
                 )
             }));
-            axios.post(`${API_URL}/block/update`, {block_id: nodeId, menu_open: newMenuState})
-                .catch(err => console.error("Failed to sync menu state:", err));
+            // Auto-save in V2 mode (menu state persisted)
+            const { currentProjectId, currentWorkflowId } = get();
+            if (currentProjectId && currentWorkflowId) {
+                get().scheduleAutoSave();
+            }
         }
     },
 
@@ -373,9 +439,11 @@ export const useStore = create((set, get) => ({
             })
         }));
 
-        // Sync with backend
-        axios.post(`${API_URL}/block/update`, { block_id: nodeId, is_collapsed: isCollapsed })
-            .catch(err => console.error("Failed to sync collapse state:", err));
+        // Auto-save in V2 mode
+        const { currentProjectId, currentWorkflowId } = get();
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
+        }
     },
 
     // --- UI & ANIMATION MANAGEMENT ---
@@ -491,16 +559,27 @@ export const useStore = create((set, get) => ({
                 return n;
             })
         }));
-        axios.post(`${API_URL}/block/toggle_visibility`, {block_id: nodeId, key, type})
-            .catch(err => console.error("Failed to sync port visibility:", err));
+        // Auto-save in V2 mode
+        const { currentProjectId, currentWorkflowId } = get();
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
+        }
     },
 
     // --- EXECUTION ---
+    // Legacy executeGraph removed - use executeWorkflowV2 instead
     executeGraph: async () => {
+        console.warn('executeGraph (legacy) is deprecated. Use executeWorkflowV2 instead.');
+        alert('Please use the Execute button with a project/workflow ID loaded.');
+    },
+
+    executeGraphLegacy: async () => {
+        // DEPRECATED: This function used /api/execute which has been removed
         set({ isExecuting: true, executionLogs: ["Starting execution..."], activeBlockId: null, executionResult: null });
 
         try {
-            const response = await fetch(`${API_URL}/execute`, {
+            // This endpoint no longer exists
+            const response = await fetch(`${API_URL}/execute_REMOVED`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -592,35 +671,17 @@ export const useStore = create((set, get) => ({
     },
 
     // --- PROJECT SAVE/LOAD ---
+    // DEPRECATED: Use saveWorkflowToV2 and loadWorkflowFromV2 instead
     saveProject: async () => {
-        try {
-            const response = await axios.get(`${API_URL}/project/save`);
-            const projectJson = JSON.stringify(response.data, null, 2);
-            const blob = new Blob([projectJson], {type: 'application/json'});
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'project.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-        } catch (error) {
-            console.error("Failed to save project:", error);
-            alert("Could not save the project. See console for details.");
-        }
+        console.warn('saveProject (legacy) is deprecated. Workflows are auto-saved in V2 mode.');
+        alert('Workflows are automatically saved. No manual save needed.');
     },
 
+    // DEPRECATED: Use loadWorkflowFromV2 instead
     loadProject: async (projectData) => {
-        try {
-            await axios.post(`${API_URL}/project/load`, projectData);
-            get().fetchGraph();
-        } catch (error) {
-            console.error("Failed to load project:", error);
-            alert(`Failed to load project: ${error.response?.data?.error || error.message}`);
-        }
+        console.warn('loadProject (legacy) is deprecated. Use loadWorkflowFromV2 instead.');
+        alert('Please open a workflow from the dashboard.');
+        /* Legacy code removed - used /api/project/load endpoint which no longer exists */
     },
 
     // --- NEW V2 API WORKFLOW MANAGEMENT ---
@@ -628,11 +689,37 @@ export const useStore = create((set, get) => ({
         set({ currentProjectId: projectId, currentWorkflowId: workflowId });
     },
 
+    // Helper to normalize inputs/outputs to array format
+    normalizePortsToArray: (portsData, metaData) => {
+        if (Array.isArray(portsData)) return portsData;
+        if (typeof portsData === 'object' && portsData !== null) {
+            return Object.entries(portsData).map(([key, value]) => ({
+                key,
+                value,
+                data_type: metaData?.[key]?.type || 'any'
+            }));
+        }
+        return [];
+    },
+
     loadWorkflowFromV2: async (projectId, workflowId) => {
         try {
             console.log(`Loading workflow ${workflowId} from project ${projectId}`);
             const response = await apiClient.get(`/v2/projects/${projectId}/workflows/${workflowId}`);
             const workflow = response.data;
+
+            // Helper function to normalize ports (defined locally to avoid store getter issues)
+            const normalizePortsToArray = (portsData, metaData) => {
+                if (Array.isArray(portsData)) return portsData;
+                if (typeof portsData === 'object' && portsData !== null) {
+                    return Object.entries(portsData).map(([key, value]) => ({
+                        key,
+                        value,
+                        data_type: metaData?.[key]?.type || 'any'
+                    }));
+                }
+                return [];
+            };
 
             // Convert workflow data to ReactFlow format
             const flowNodes = (workflow.data?.nodes || []).map(node => {
@@ -642,43 +729,49 @@ export const useStore = create((set, get) => ({
 
                 console.log('Loading node:', node);
 
+                let resultNode;
                 if (node.position && node.data) {
                     // Template format - already in correct structure
                     console.log('Template format - data.inputs:', node.data.inputs);
 
-                    // Ensure data has required fields
-                    if (!node.data.inputs || !node.data.outputs) {
-                        console.error('Node missing inputs/outputs:', node);
-                        // Fallback: try to reconstruct from node.data fields
-                        return {
-                            id: node.id,
-                            type: 'custom',
-                            position: node.position,
-                            data: {
-                                ...node.data,
-                                inputs: node.data.inputs || [],
-                                outputs: node.data.outputs || [],
-                                hidden_inputs: node.data.hidden_inputs || [],
-                                hidden_outputs: node.data.hidden_outputs || []
-                            }
-                        };
-                    }
+                    // Normalize inputs/outputs and create new data object
+                    const normalizedInputs = normalizePortsToArray(node.data.inputs, node.data.input_meta);
+                    const normalizedOutputs = normalizePortsToArray(node.data.outputs, node.data.output_meta);
 
-                    return {
-                        ...node,
-                        type: 'custom', // Ensure correct ReactFlow type
+                    resultNode = {
+                        id: node.id,
+                        type: 'custom',
+                        position: node.position,
+                        data: {
+                            ...node.data,
+                            inputs: normalizedInputs,
+                            outputs: normalizedOutputs,
+                            hidden_inputs: node.data.hidden_inputs || [],
+                            hidden_outputs: node.data.hidden_outputs || []
+                        }
                     };
                 } else {
                     // Saved format - need to reconstruct
                     const { id, x, y, ...nodeData } = node;
                     console.log('Saved format - nodeData:', nodeData);
-                    return {
+
+                    // Normalize inputs/outputs and create new data object
+                    const normalizedInputs = normalizePortsToArray(nodeData.inputs, nodeData.input_meta);
+                    const normalizedOutputs = normalizePortsToArray(nodeData.outputs, nodeData.output_meta);
+
+                    resultNode = {
                         id,
                         type: 'custom',
                         position: { x: x || 0, y: y || 0 },
-                        data: nodeData,
+                        data: {
+                            ...nodeData,
+                            inputs: normalizedInputs,
+                            outputs: normalizedOutputs
+                        },
                     };
                 }
+
+                return resultNode;
             });
 
             const flowEdges = workflow.data?.edges || [];

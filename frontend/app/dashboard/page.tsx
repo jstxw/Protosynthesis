@@ -74,7 +74,7 @@ type SortOption = 'newest' | 'oldest' | 'name';
 // Main Dashboard Component
 export function Dashboard() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -84,10 +84,20 @@ export function Dashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch projects on mount
+  // Check authentication
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (!loading && !user) {
+      console.warn('User not authenticated, redirecting to login...');
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  // Fetch projects on mount (only when user is available)
+  useEffect(() => {
+    if (user && !loading) {
+      fetchProjects();
+    }
+  }, [user, loading]);
 
   const fetchProjects = async () => {
     setIsLoading(true);
@@ -96,7 +106,10 @@ export function Dashboard() {
       const uiProjects = apiProjects.map(convertApiProject);
       setProjects(uiProjects);
     } catch (err: any) {
-      console.error('❌ Failed to fetch projects:', err);
+      // Only log errors that aren't just "no projects found"
+      const errorMessage = err?.message || err?.code || 'Unknown error';
+      console.error('❌ Failed to fetch projects:', errorMessage, err);
+      // Set empty array as fallback for new users
       setProjects([]);
     } finally {
       setIsLoading(false);
@@ -130,7 +143,18 @@ export function Dashboard() {
       router.push(`/workflow?project=${newProject.project_id}&workflow=${newWorkflow.workflow_id}`);
     } catch (err: any) {
       console.error('Failed to create project:', err);
-      setError(err.message || 'Failed to create project');
+      // Handle different error formats
+      let errorMessage = 'Failed to create project';
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.code) {
+        errorMessage = `Error: ${err.code}`;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.error) {
+        errorMessage = err.error;
+      }
+      setError(errorMessage);
     } finally {
       setIsCreating(false);
     }
@@ -160,6 +184,22 @@ export function Dashboard() {
 
     return result;
   }, [projects, searchQuery, sortBy]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="dashboard-page">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-[var(--node-text-color)]">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="dashboard-page">

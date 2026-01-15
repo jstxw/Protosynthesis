@@ -44,8 +44,9 @@ def get_projects(current_user):
     """Lists all projects for the authenticated user."""
     try:
         user_id = current_user.get('sub')
+        user_email = current_user.get('email', '')
         from user_service import UserService
-        projects = UserService.get_all_projects(user_id)
+        projects = UserService.get_all_projects(user_id, user_email)
 
         # Transform for frontend if needed, or return as is
         # UserService returns list of project dicts
@@ -87,7 +88,7 @@ def list_workflows(current_user, project_id):
         user_id = current_user.get('sub')
         from user_service import UserService
         workflows = UserService.get_all_workflows(user_id, project_id)
-        return jsonify(workflows), 200
+        return jsonify({"workflows": workflows}), 200
     except Exception as e:
         logger.error(f"Error listing workflows: {e}", exc_info=True)
         return jsonify({"error": "Failed to list workflows"}), 500

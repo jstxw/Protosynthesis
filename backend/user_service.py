@@ -129,18 +129,27 @@ class UserService:
         return None
 
     @staticmethod
-    def get_all_projects(supabase_user_id: str) -> List[Dict]:
+    def get_all_projects(supabase_user_id: str, email: str = None) -> List[Dict]:
         """
         Get all projects for a user.
 
         Args:
             supabase_user_id: UUID from Supabase Auth
+            email: User's email (optional, for lazy initialization)
 
         Returns:
             list: List of project objects
         """
         user = UserService.get_user(supabase_user_id)
-        return user.get("projects", []) if user else []
+
+        # If user doesn't exist in MongoDB, create them (lazy initialization)
+        if not user:
+            print(f"⚠️ User {supabase_user_id} not found in MongoDB. Lazy initializing user...")
+            if email:
+                UserService.create_user(supabase_user_id, email)
+            return []
+
+        return user.get("projects", [])
 
     @staticmethod
     def update_project(supabase_user_id: str, project_id: str, update_data: Dict) -> bool:

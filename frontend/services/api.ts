@@ -30,6 +30,10 @@ apiClient.interceptors.request.use(
         // Get current Supabase session
         const { session, error } = await authHelpers.getSession();
 
+        if (error) {
+          console.error('Session error:', error);
+        }
+
         if (!error && session) {
           // Add JWT token to Authorization header
           config.headers.Authorization = `Bearer ${session.access_token}`;
@@ -38,6 +42,15 @@ apiClient.interceptors.request.use(
           if (session.user?.id) {
             config.headers['X-User-ID'] = session.user.id;
           }
+
+          console.log('API Request with auth:', {
+            url: config.url,
+            method: config.method,
+            hasAuth: !!session.access_token,
+            userId: session.user?.id
+          });
+        } else {
+          console.warn('No session found for API request to:', config.url);
         }
       } catch (error) {
         console.error('Failed to get session for API request:', error);
@@ -57,6 +70,8 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
+    console.error('API Error:', error);
+
     // Handle specific error cases
     if (error.response) {
       const { status, data } = error.response;
@@ -83,7 +98,7 @@ apiClient.interceptors.response.use(
       // Return a standardized error
       const apiError: ApiError = {
         code: data?.code || `HTTP_${status}`,
-        message: data?.message || error.message || 'An error occurred',
+        message: data?.message || data?.error || error.message || 'An error occurred',
         details: data?.details,
       };
 
@@ -92,14 +107,20 @@ apiClient.interceptors.response.use(
 
     // Network errors
     if (error.request) {
+      console.error('Network error - unable to reach server');
       const networkError: ApiError = {
         code: 'NETWORK_ERROR',
-        message: 'Unable to connect to the server. Please check your connection.',
+        message: 'Unable to connect to the server. Please check your connection and ensure the backend is running.',
       };
       return Promise.reject(networkError);
     }
 
-    return Promise.reject(error);
+    // Other errors (e.g., request setup errors)
+    const genericError: ApiError = {
+      code: 'UNKNOWN_ERROR',
+      message: error.message || 'An unexpected error occurred',
+    };
+    return Promise.reject(genericError);
   }
 );
 

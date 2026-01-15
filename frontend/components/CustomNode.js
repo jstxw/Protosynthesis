@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo, useEffect } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { useStore } from '../helpers/store';
 import Image from 'next/image';
@@ -6,6 +6,9 @@ import ReactIDE from './ReactIDE';
 
 // NOTE: avoid returning a fresh object from a selector (causes snapshot caching warnings)
 // Use individual `useStore` selectors below in the component to prevent re-renders/infinite loops.
+
+// Constant empty arrays to avoid creating new references
+const EMPTY_ARRAY = [];
 
 const getIconForType = (type) => {
   switch (type) {
@@ -34,14 +37,18 @@ const CustomNode = ({ data }) => {
   const activeBlockId = useStore((s) => s.activeBlockId);
   const [name, setName] = useState(data.name || '');
 
-    // Determine the single React I/O port key to always point the editor at.
+  // Ensure inputs and outputs are always arrays (use constant empty array for stable reference)
+  const inputs = Array.isArray(data.inputs) ? data.inputs : EMPTY_ARRAY;
+  const outputs = Array.isArray(data.outputs) ? data.outputs : EMPTY_ARRAY;
+
+  // Determine the single React I/O port key to always point the editor at.
   // Priority: any port with "react" in the key (case-insensitive), otherwise first available port.
   const reactIOKey = useMemo(() => {
     if (data.type !== 'REACT') return null;
-    const allPorts = [ ...(data.inputs || []), ...(data.outputs || []) ];
+    const allPorts = [ ...inputs, ...outputs ];
     const found = allPorts.find(p => /react/i.test(p.key));
     return found?.key || allPorts[0]?.key || null;
-  }, [data.type, data.inputs, data.outputs]);
+  }, [data.type, inputs, outputs]);
 
   // --- Local handlers moved here to avoid recreating selectors ---
   const handleNameBlur = (e) => updateNode(data.id, { name: e.target.value });
@@ -88,7 +95,7 @@ const CustomNode = ({ data }) => {
       {/* Port Visibility Settings */}
       <div className="menu-section">
         <label>Visible Inputs</label>
-        {data.inputs.map(port => (
+        {inputs.map(port => (
           <div key={`vis-in-${port.key}`} className="menu-item">
             <input
               type="checkbox"
@@ -102,7 +109,7 @@ const CustomNode = ({ data }) => {
       </div>
       <div className="menu-section">
         <label>Visible Outputs</label>
-        {data.outputs.map(port => (
+        {outputs.map(port => (
           <div key={`vis-out-${port.key}`} className="menu-item">
             <input
               type="checkbox"
@@ -217,13 +224,13 @@ const CustomNode = ({ data }) => {
         <div className="node-ports">
           <div className="port-column" style={{ minWidth: '50%' }}>
             <div className="port-title">Inputs</div>
-            {data.inputs
+            {inputs
               .filter(input => !data.hidden_inputs?.includes(input.key))
               .map(input => renderPort(input, 'input'))}
           </div>
           <div className="port-column">
             <div className="port-title">Outputs</div>
-            {data.outputs.length > 0 && data.outputs
+            {outputs.length > 0 && outputs
               .filter(output => !data.hidden_outputs?.includes(output.key))
               .map(output => renderPort(output, 'output'))}
           </div>
