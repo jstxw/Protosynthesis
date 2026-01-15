@@ -72,6 +72,16 @@
     color: var(--node-text-color);
     margin-top: 30px;
     overflow: visible;
+    animation: bounce 6s ease-in-out infinite;
+}
+
+/* Stagger the bounce animations for auth nodes */
+.auth-node.user-info-node {
+    animation-delay: 0s;
+}
+
+.auth-node.main-auth-node {
+    animation-delay: 3s;
 }
 
 .auth-node.main-auth-node {
@@ -233,6 +243,7 @@
 
 .auth-port-content input::placeholder {
     color: var(--text-muted-color);
+    opacity: 0.4;
 }
 
 /* Password input wrapper */

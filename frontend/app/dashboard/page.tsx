@@ -11,9 +11,7 @@ import {
   Sparkles,
   ArrowRight,
   MoreVertical,
-  X,
-  CreditCard,
-  Mail
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { projectService, workflowService, type Project as ApiProject } from '@/services/projects';
@@ -395,50 +393,43 @@ export function Dashboard() {
               width="500px"
               className="dashboard-modal-content"
             >
-              <div className="flex flex-col gap-4">
+              <div style={{ padding: '24px' }}>
                 <div>
-                  <label className="block text-[12px] font-bold mb-2 text-[var(--node-text-color)]">Project Name</label>
+                  <label
+                    htmlFor="project-name"
+                    className="block text-[13px] font-bold text-[var(--node-text-color)]"
+                    style={{ marginBottom: '12px' }}
+                  >
+                    Project Name
+                  </label>
                   <input
+                    id="project-name"
                     type="text"
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="My Awesome Workflow"
-                    className="w-full p-2 text-[12px] bg-[var(--input-bg-color)] border border-[var(--input-border-color)] rounded text-[var(--node-text-color)] focus:outline-none focus:border-[var(--color-blue)]"
+                    className="w-full p-3 text-[13px] bg-[var(--input-bg-color)] border border-[var(--input-border-color)] rounded text-[var(--node-text-color)] focus:outline-none focus:border-[var(--color-blue)]"
                     autoFocus
                   />
                 </div>
 
                 {error && (
-                  <div className="p-2 bg-red-100 border border-red-200 text-red-600 rounded text-[11px]">
+                  <div className="p-3 bg-red-100 border border-red-200 text-red-600 rounded text-[12px]" style={{ marginTop: '16px' }}>
                     {error}
                   </div>
                 )}
 
-                <div className="flex flex-col gap-2 mt-2">
-                  <label className="block text-[12px] font-bold text-[var(--node-text-color)]">Quick Templates</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button className="p-2 text-left bg-[var(--item-bg-color)] rounded border border-transparent hover:border-[var(--border-color)] text-[11px] text-[var(--node-text-color)]">
-                      <div className="font-bold flex items-center gap-2"><CreditCard size={12} /> Payment Flow</div>
-                      <div className="text-[var(--text-muted-color)]">Stripe → Airtable</div>
-                    </button>
-                    <button className="p-2 text-left bg-[var(--item-bg-color)] rounded border border-transparent hover:border-[var(--border-color)] text-[11px] text-[var(--node-text-color)]">
-                      <div className="font-bold flex items-center gap-2"><Mail size={12} /> Email Autoresponder</div>
-                      <div className="text-[var(--text-muted-color)]">Webhook → SendGrid</div>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-[var(--input-border-color)]">
+                <div className="flex justify-end" style={{ marginTop: '16px', gap: '12px' }}>
                   <button
                     onClick={() => setShowNewProjectModal(false)}
-                    className="px-4 py-2 rounded bg-[var(--item-bg-color)] text-[var(--node-text-color)] text-[12px] font-bold hover:bg-[var(--hover-color)] transition-colors border border-[var(--input-border-color)]"
+                    className="px-4 py-2 rounded text-[var(--node-text-color)] text-[13px] font-medium hover:bg-[var(--item-bg-color)] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreateProject}
                     disabled={!newProjectName.trim() || isCreating}
-                    className="px-4 py-2 rounded bg-[var(--color-green)] text-[var(--node-text-color)] text-[12px] font-bold hover:brightness-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--color-green)]"
+                    className="px-6 py-2 rounded bg-[var(--color-green)] text-white text-[14px] font-bold hover:brightness-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
                     {isCreating ? 'Creating...' : 'Create Project'}
                   </button>

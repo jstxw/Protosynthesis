@@ -152,6 +152,47 @@ def delete_workflow(current_user, project_id, workflow_id):
 
 
 # ==========================================
+# Block Schema Processing
+# ==========================================
+
+@api_v2.route('/blocks/process-schema', methods=['POST'])
+@require_auth
+def process_block_schema(current_user):
+    """
+    Processes a block with a new schema_key, returning the updated block structure
+    with properly configured inputs and outputs.
+    """
+    try:
+        data = request.json
+        block_data = data.get("block")
+        schema_key = data.get("schema_key")
+
+        if not block_data or not schema_key:
+            return jsonify({"error": "Missing block or schema_key"}), 400
+
+        # Import block types
+        from block_types.api_block import APIBlock
+
+        # Create a temporary APIBlock with the new schema
+        temp_block = APIBlock(
+            name=block_data.get("name", "API Block"),
+            schema_key=schema_key,
+            x=block_data.get("x", 0),
+            y=block_data.get("y", 0)
+        )
+
+        # Set the block ID to match the original
+        temp_block.id = block_data.get("id")
+
+        # Return the updated block structure
+        return jsonify({"block": temp_block.to_dict()}), 200
+
+    except Exception as e:
+        logger.error(f"Error processing block schema: {e}", exc_info=True)
+        return jsonify({"error": "Failed to process block schema"}), 500
+
+
+# ==========================================
 # Missing Project Routes
 # ==========================================
 

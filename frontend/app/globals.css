@@ -48,6 +48,12 @@ input, textarea, select, button {
     font-family: inherit;
 }
 
+/* Fainter placeholder text globally */
+input::placeholder,
+textarea::placeholder {
+    opacity: 0.4;
+}
+
 .app-layout {
     display: flex;
     height: 100vh;
@@ -99,19 +105,58 @@ input, textarea, select, button {
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     border-right: 1px solid rgba(0, 0, 0, 0.1);
     z-index: 10;
+    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
+    position: relative;
 }
 
-.controls-section:last-child {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+.control-panel.collapsed {
+    width: 48px;
+    padding: 10px 5px;
+}
+
+.control-panel.collapsed > * {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .controls-section {
     margin-bottom: 15px; /* Increased separation between sections */
     display: flex;
     flex-direction: column;
+}
+
+.controls-section.api-library-section {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.controls-section.api-library-section .api-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-bottom: 5px;
+}
+
+.controls-section.logic-blocks-section {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    padding-bottom: 10px;
+}
+
+.controls-section.logic-blocks-section h4 {
+    margin-bottom: 6px;
+}
+
+.controls-section.logic-blocks-section .logic-grid {
+    overflow: visible;
+    padding: 0;
+    display: grid;
 }
 
 .controls-section h4 {
@@ -146,21 +191,51 @@ input, textarea, select, button {
     border-color: var(--color-green);
 }
 
-/* Thick White Connecting Lines */
-.react-flow__edge-path {
-    stroke: #ffffff;
-    stroke-width: 4px;
-    stroke-dasharray: 10 8; /* Dotted/Dashed effect */
+.execute-button:hover {
+    background-color: var(--button-hover-green);
 }
 
-@keyframes dashDraw {
-    to {
-        stroke-dashoffset: -36;
+/* Smooth Connecting Lines */
+.react-flow__edge-path {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 2.5px;
+    transition: stroke 0.3s ease, stroke-width 0.3s ease;
+}
+
+.react-flow__edge-path:hover {
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 3px;
+}
+
+/* Animated data flow effect */
+@keyframes flowPulse {
+    0% {
+        stroke-dashoffset: 24;
+        stroke: rgba(255, 255, 255, 0.8);
+    }
+    50% {
+        stroke: rgba(255, 255, 255, 1);
+    }
+    100% {
+        stroke-dashoffset: 0;
+        stroke: rgba(255, 255, 255, 0.8);
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
     }
 }
 
 .animated-edge .react-flow__edge-path {
-    animation: dashDraw 0.5s linear infinite;
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 3px;
+    stroke-dasharray: 8 4;
+    animation: flowPulse 2s ease-in-out infinite;
 }
 
 /* Custom Node Styles from your CustomNode.js */
@@ -174,8 +249,9 @@ input, textarea, select, button {
     border: none;
     border-radius: 10px 10px 0 0;
     font-size: 12px;
-    min-width: 250px;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease; /* added transform transition */
+    min-width: 400px;
+    width: 400px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
     color: var(--node-text-color);
     box-shadow: 8px 8px 30px rgba(0, 0, 0, 0.2);
     position: relative;
@@ -259,15 +335,17 @@ input, textarea, select, button {
 }
 
 .node-body {
-    padding: 10px;
+    padding: 12px;
 }
 
 .node-ports {
     display: flex;
+    gap: 10px;
 }
 
 .port-column {
     flex: 1;
+    min-width: 0;
 }
 
 .port-title {
@@ -282,11 +360,14 @@ input, textarea, select, button {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
 }
 
 .port-label {
     display: flex;
     flex-direction: column;
+    flex: 0 0 auto;
+    min-width: 0;
 }
 
 .port-type {
@@ -295,9 +376,57 @@ input, textarea, select, button {
     filter: brightness(0.8);
 }
 
+/* Required field indicator */
+.required-asterisk {
+    color: var(--danger-color, #ef4444);
+    margin-left: 3px;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+/* Required field highlighting */
+.required-field {
+    border-color: var(--danger-color, #ef4444) !important;
+    border-width: 1.5px !important;
+    background: rgba(239, 68, 68, 0.05) !important;
+}
+
+/* Base64 Output Previews */
+.port-preview {
+    margin-top: 8px;
+    padding: 8px;
+    background: var(--hover-color);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.base64-image-preview {
+    max-width: 100%;
+    max-height: 200px;
+    width: auto;
+    height: auto;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.base64-image-preview:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+
+.base64-audio-player {
+    width: 100%;
+    height: 32px;
+}
+
 /* Darker muted text on paper */
 .port input {
-    width: 100px;
+    width: 140px;
+    max-width: 100%;
     font-size: 11px;
     padding: 2px;
     background: var(--input-bg-color);
@@ -341,7 +470,36 @@ input, textarea, select, button {
 
 .react-flow__handle.handle-connected {
     background-color: #ffffff;
-    box-shadow: none;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+/* Colored handles based on node type */
+.react-flow__handle.handle-node-header-api.handle-connected {
+    background-color: var(--color-red);
+    box-shadow: 0 0 8px rgba(244, 143, 177, 0.8);
+}
+
+.react-flow__handle.handle-node-header-start.handle-connected {
+    background-color: var(--color-green);
+    box-shadow: 0 0 8px rgba(197, 225, 165, 0.8);
+}
+
+.react-flow__handle.handle-node-header-react.handle-connected {
+    background-color: var(--color-blue);
+    box-shadow: 0 0 8px rgba(159, 168, 218, 0.8);
+}
+
+.react-flow__handle.handle-node-header-string.handle-connected,
+.react-flow__handle.handle-node-header-logic.handle-connected,
+.react-flow__handle.handle-node-header-transform.handle-connected,
+.react-flow__handle.handle-node-header-wait.handle-connected {
+    background-color: var(--color-orange);
+    box-shadow: 0 0 8px rgba(255, 224, 130, 0.8);
+}
+
+.react-flow__handle.handle-node-header-dialogue.handle-connected {
+    background-color: var(--color-purple);
+    box-shadow: 0 0 8px rgba(206, 147, 216, 0.8);
 }
 
 /* Removed ::after pseudo-element to simplify hole punch look */
@@ -361,6 +519,23 @@ input, textarea, select, button {
 .delete-button:hover {
     color: white;
     background-color: var(--danger-color);
+}
+
+/* Edit React Button */
+.edit-react-button {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.edit-react-button:hover {
+    background: var(--color-blue);
+    transform: scale(1.1);
 }
 
 /* Updated block-list styles to match dashboard-projects-list */
@@ -407,6 +582,117 @@ input, textarea, select, button {
     object-fit: contain;
 }
 
+.api-avatar-container {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* API Category Styles */
+.api-category {
+    margin-bottom: 12px;
+}
+
+.api-category-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--hover-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.api-category-header:hover {
+    background: var(--item-bg-color);
+    transform: translateX(2px);
+}
+
+.category-icon {
+    font-size: 16px;
+}
+
+.category-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--node-text-color);
+}
+
+.category-count {
+    font-size: 11px;
+    color: var(--text-muted-color);
+}
+
+.category-toggle {
+    font-size: 10px;
+    color: var(--text-muted-color);
+}
+
+.api-category-content {
+    padding-left: 8px;
+    margin-top: 4px;
+}
+
+/* Auth & Rate Limit Badges */
+.auth-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    font-size: 10px;
+    background: var(--danger-color, #ef4444);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.rate-limit-badge {
+    margin-left: 6px;
+    font-size: 11px;
+    color: var(--color-yellow, #f59e0b);
+}
+
+.api-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.api-logo-wrapper {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.api-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
 .block-list-item-content {
     display: flex;
     flex-direction: column;
@@ -436,17 +722,42 @@ input, textarea, select, button {
 .logic-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 3px;
+    row-gap: 3px;
 }
 
 .logic-grid .block-list-item {
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     text-align: center;
     border: none;
     border-radius: 4px;
-    padding: 15px 4px; /* Increased padding for better touch target/visuals */
+    padding: 6px 2px;
+    margin: 0;
     transition: transform 0.2s ease, background-color 0.2s ease;
+    min-height: 45px;
+    height: 45px;
+    gap: 3px;
+}
+
+.logic-grid .block-list-item-icon {
+    width: 12px !important;
+    height: 12px !important;
+    margin: 0;
+}
+
+.logic-grid .block-list-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+}
+
+.logic-grid .block-list-item-name {
+    font-size: 10px;
+    line-height: 1.1;
+    margin: 0;
 }
 
 .logic-grid .block-list-item:hover {
@@ -647,69 +958,35 @@ input, textarea, select, button {
     overflow-y: auto;
 }
 
-/* React IDE Panel */
-.react-ide-panel {
-    width: 400px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+/* React IDE Modal */
+.react-ide-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    backdrop-filter: blur(4px);
+}
+
+.react-ide-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 1200px;
+    height: 85vh;
     background: #1e1e1e;
     color: #fff;
-    border-left: 1px solid var(--border-color);
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
-    transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
-    transform: translateX(0);
-    position: relative; /* Needed for absolute positioning of toggle */
-}
-
-.react-ide-panel.collapsed {
-    width: 36px; /* Collapsed width */
-    transform: translateX(0); /* Ensure it stays on screen */
-    overflow: hidden; /* Hide content */
-    cursor: pointer; /* Indicate it's clickable to expand */
-}
-
-.react-ide-panel.collapsed .ide-editor-container,
-.react-ide-panel.collapsed .ide-preview-container {
-    display: none; /* Hide content when collapsed */
-}
-
-.react-ide-panel.collapsed .ide-tabs,
-.react-ide-panel.collapsed .ide-node-name {
-    display: none; /* Hide tabs and node name when collapsed */
-}
-
-.react-ide-panel .ide-header {
-    position: relative; /* For positioning the toggle button */
-}
-
-.react-ide-panel .collapse-toggle {
-    position: absolute;
-    right: 5px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 0;
-    z-index: 10;
-    transition: transform 0.3s ease-in-out, right 0.3s ease-in-out;
-}
-
-.react-ide-panel.collapsed .collapse-toggle {
-    right: 0; /* Position relative to the collapsed width */
-    transform: translateY(-50%) rotate(180deg); /* Rotate arrow when collapsed */
-    color: #fff;
-}
-
-.react-ide-panel.collapsed .ide-header {
-    justify-content: center;
-    padding: 0;
-    border-bottom: none;
-    background: transparent; /* Make it blend with the background */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 
@@ -755,6 +1032,25 @@ input, textarea, select, button {
     font-style: italic;
 }
 
+.ide-close-btn {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+}
+
+.ide-close-btn:hover {
+    background: #ef5350;
+    color: #fff;
+}
+
 .ide-editor-container {
     flex-grow: 1;
     overflow: hidden;
@@ -791,22 +1087,58 @@ input, textarea, select, button {
     border: none;
 }
 
-.react-ide-empty {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-muted-color);
-    font-size: 14px;
-    padding: 20px;
-    text-align: center;
-    background: var(--surface-color);
-    border-left: 1px solid var(--border-color);
+
+/* ===== ZOOM CONTROLS (ReactFlow Controls) ===== */
+.react-flow__controls {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    background: var(--surface-color) !important;
 }
 
-.react-ide-empty p {
-    max-width: 80%;
+.react-flow__controls-button {
+    background: var(--node-bg-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    width: 40px !important;
+    height: 40px !important;
+    transition: all 0.2s ease !important;
+}
+
+.react-flow__controls-button:hover {
+    background: var(--hover-color) !important;
+    transform: scale(1.05) !important;
+}
+
+.react-flow__controls-button svg {
+    width: 20px !important;
+    height: 20px !important;
+    fill: var(--node-text-color) !important;
+    stroke: var(--node-text-color) !important;
+}
+
+/* ===== MINIMAP ===== */
+.react-flow__minimap {
+    background: var(--surface-color) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    top: 20px !important;
+    right: 20px !important;
+    bottom: auto !important;
+    left: auto !important;
+}
+
+.react-flow__minimap-mask {
+    fill: var(--background-color) !important;
+    fill-opacity: 0.7 !important;
+    stroke: var(--primary-color) !important;
+    stroke-width: 2 !important;
+}
+
+.react-flow__minimap-node {
+    fill: var(--node-bg-color) !important;
+    stroke: var(--border-color) !important;
+    stroke-width: 1 !important;
 }
 
 /* AI Assistant Chat */

@@ -9,6 +9,8 @@ const ReactIDE = () => {
     const updateOutputValue = useStore((state) => state.updateOutputValue);
     const executeGraph = useStore((state) => state.executeGraph);
     const edges = useStore((state) => state.edges);
+    const reactIDEOpen = useStore((state) => state.reactIDEOpen);
+    const closeReactIDE = useStore((state) => state.closeReactIDE);
     // Auto-seek the React node directly, ignoring selection.
     const reactNode = useStore(state =>
         (state.nodes || []).find(n => n.data?.type === 'REACT' || n.data?.block_type === 'REACT')
@@ -18,7 +20,6 @@ const ReactIDE = () => {
     const [jsx, setJsx] = useState('');
     const [css, setCss] = useState('');
     const [activeTab, setActiveTab] = useState('jsx'); // 'jsx' or 'css'
-    const [isCollapsed, setIsCollapsed] = useState(false); // New state for collapse
     const iframeRef = useRef(null);
     const [iframeReady, setIframeReady] = useState(false);
     const monaco = useMonaco();
@@ -230,23 +231,20 @@ const ReactIDE = () => {
     }, [reactNodeId, executeGraph, updateOutputValue]);
 
 
-    if (!reactNode) {
-        return (
-            <div className="react-ide-panel react-ide-empty">
-                <p>No React I/O node found in the workflow.</p>
-                <p>Add a <strong>React I/O</strong> block from the Logic Blocks panel to activate the editor.</p>
-            </div>
-        );
+    // Don't render if not open OR if no react node exists
+    if (!reactIDEOpen || !reactNode) {
+        return null;
     }
 
     return (
-        <div 
-            className={`react-ide-panel ${isCollapsed ? "collapsed" : ""}`}
-            onClick={isCollapsed ? () => setIsCollapsed(false) : undefined}
-            title={isCollapsed ? "Click to expand" : ""}
-        >
-            <div className="ide-header">
-                <div className="ide-tabs">
+        <>
+            {/* Modal backdrop */}
+            <div className="react-ide-backdrop" onClick={closeReactIDE} />
+
+            {/* Modal content */}
+            <div className="react-ide-modal">
+                <div className="ide-header">
+                    <div className="ide-tabs">
                     <button
                         className={`ide-tab ${activeTab === 'jsx' ? 'active' : ''}`}
                         onClick={() => setActiveTab('jsx')}
@@ -262,14 +260,11 @@ const ReactIDE = () => {
                 </div>
                 <div className="ide-node-name">{reactNode?.data?.name || 'React I/O'}</div>
                 <button
-                    className="collapse-toggle"
-                    onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering panel onClick
-                        setIsCollapsed(!isCollapsed);
-                    }}
-                    title={isCollapsed ? "Expand" : "Collapse"}
+                    className="ide-close-btn"
+                    onClick={closeReactIDE}
+                    title="Close"
                 >
-                    {isCollapsed ? "⬅" : "➡"}
+                    ✕
                 </button>
             </div>
 
@@ -316,7 +311,8 @@ const ReactIDE = () => {
                     />
                 </div>
             </div>
-        </div>
+            </div>
+        </>
     );
 };
 

@@ -68,24 +68,42 @@ class APIBlock(Block):
         if self.schema_key == "custom":
             # Special handling for the generic custom block
             for key, meta in schema_inputs.items():
-                self.register_input(key, data_type=meta.get("type", "any"), default_value=meta.get("default"))
+                # Pass all metadata fields
+                self.register_input(
+                    key,
+                    data_type=meta.get("type", "any"),
+                    default_value=meta.get("default"),
+                    required=meta.get("required", False),
+                    placeholder=meta.get("placeholder"),
+                    description=meta.get("description"),
+                    validation=meta.get("validation")
+                )
         else:
             # Handling for structured schemas
             for input_type in ["path", "params", "body", "headers", "auth"]: # Added "auth"
                 for key, meta in schema_inputs.get(input_type, {}).items():
+                    # Pass all metadata fields including new ones
                     self.register_input(
-                        key, 
-                        data_type=meta.get("type", "any"), 
+                        key,
+                        data_type=meta.get("type", "any"),
                         default_value=meta.get("default"),
-                        hidden=meta.get("hidden", False)
+                        hidden=meta.get("hidden", False),
+                        required=meta.get("required", False),
+                        placeholder=meta.get("placeholder"),
+                        description=meta.get("description"),
+                        validation=meta.get("validation")
                     )
 
         # Register new outputs from the schema
         for key, meta in schema.get("outputs", {}).items():
+            # Pass all output metadata including format and description
             self.register_output(
-                key, 
+                key,
                 data_type=meta.get("type", "any"),
-                hidden=meta.get("hidden", False)
+                hidden=meta.get("hidden", False),
+                format=meta.get("format"),
+                description=meta.get("description"),
+                path=meta.get("path")
             )
 
     def execute(self):

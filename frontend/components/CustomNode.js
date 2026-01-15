@@ -35,6 +35,7 @@ const CustomNode = ({ data }) => {
   const removeBlock = useStore((s) => s.removeBlock);
   const edges = useStore((s) => s.edges);
   const activeBlockId = useStore((s) => s.activeBlockId);
+  const openReactIDE = useStore((s) => s.openReactIDE);
   const [name, setName] = useState(data.name || '');
 
   // Ensure inputs and outputs are always arrays (use constant empty array for stable reference)
@@ -131,17 +132,65 @@ const CustomNode = ({ data }) => {
 
   // This is the crucial part: render the key, not the object.
   const renderPort = (port, type) => {
-    const isConnected = edges.some(edge => 
+    const isConnected = edges.some(edge =>
       (type === 'input' && edge.target === data.id && edge.targetHandle === port.key) ||
       (type === 'output' && edge.source === data.id && edge.sourceHandle === port.key)
     );
 
+    const handleClass = isConnected ? `handle-connected handle-${getHeaderClass()}` : '';
+
+    // Get metadata for enhanced features
+    const isRequired = port.required || false;
+    const placeholder = port.placeholder || 'Manual Input';
+    const description = port.description || '';
+    const hasValidation = port.validation || false;
+    const format = port.format || null;
+
+    // Special rendering for outputs with base64 data
+    const renderOutputPreview = () => {
+      if (!port.value) return null;
+
+      if (format === 'base64_image') {
+        // Render image preview
+        const isBase64 = typeof port.value === 'string' && port.value.length > 100;
+        if (isBase64) {
+          const imgSrc = port.value.startsWith('data:') ? port.value : `data:image/png;base64,${port.value}`;
+          return (
+            <div className="port-preview">
+              <img src={imgSrc} alt="Output preview" className="base64-image-preview" title="Click to view full size" />
+            </div>
+          );
+        }
+      }
+
+      if (format === 'base64_audio') {
+        // Render audio player
+        const isBase64 = typeof port.value === 'string' && port.value.length > 100;
+        if (isBase64) {
+          const audioSrc = port.value.startsWith('data:') ? port.value : `data:audio/mpeg;base64,${port.value}`;
+          return (
+            <div className="port-preview">
+              <audio controls className="base64-audio-player" title="Audio output">
+                <source src={audioSrc} type="audio/mpeg" />
+                Your browser does not support audio playback.
+              </audio>
+            </div>
+          );
+        }
+      }
+
+      return null;
+    };
+
     return (
-      <div key={port.key} className="port">
-        {type === 'input' && <Handle type="target" position={Position.Left} id={port.key} className={isConnected ? 'handle-connected' : ''} />}
-        
+      <div key={port.key} className="port" title={description}>
+        {type === 'input' && <Handle type="target" position={Position.Left} id={port.key} className={handleClass} />}
+
         <div className="port-label">
-          <span>{port.key}</span>
+          <span>
+            {port.key}
+            {isRequired && <span className="required-asterisk" title="Required field">*</span>}
+          </span>
           <span className="port-type">({port.data_type})</span>
         </div>
 
@@ -154,23 +203,30 @@ const CustomNode = ({ data }) => {
               checked={!!port.value}
               onChange={(e) => updateInputValue(data.id, port.key, e.target.checked)}
               style={{ width: 'auto', margin: '0 5px' }}
+              title={description}
             />
           ) : (
             <input
               type="text"
-              className="nodrag" // Prevents node dragging when interacting with the input
+              className={`nodrag ${isRequired && !port.value ? 'required-field' : ''}`}
               value={
                 typeof port.value === 'object' && port.value !== null
                   ? JSON.stringify(port.value)
                   : port.value ?? ''
               }
               onChange={(e) => updateInputValue(data.id, port.key, e.target.value)}
-              placeholder="Manual Input"
+              placeholder={placeholder}
+              title={description}
+              aria-label={port.key}
+              aria-required={isRequired}
             />
           )
         )}
 
-        {type === 'output' && <Handle type="source" position={Position.Right} id={port.key} className={isConnected ? 'handle-connected' : ''} />}
+        {/* Special preview for output ports with base64 data */}
+        {type === 'output' && renderOutputPreview()}
+
+        {type === 'output' && <Handle type="source" position={Position.Right} id={port.key} className={handleClass} />}
       </div>
     );
   };
@@ -211,18 +267,29 @@ const CustomNode = ({ data }) => {
             style={{ gridArea: '1/1', width: '100%', minWidth: '0', padding: 0 }}
           />
         </div>
-        {data.menu_open ? (
-          <button className="delete-button nodrag" onClick={() => removeBlock(data.id)} title="Delete Block">
-            &times;
-          </button>
-        ) : (
-          <span className="node-type">{data.type}</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {data.type === 'REACT' && !data.menu_open && (
+            <button
+              className="edit-react-button nodrag"
+              onClick={openReactIDE}
+              title="Edit React Component"
+            >
+              ✏️
+            </button>
+          )}
+          {data.menu_open ? (
+            <button className="delete-button nodrag" onClick={() => removeBlock(data.id)} title="Delete Block">
+              &times;
+            </button>
+          ) : (
+            <span className="node-type">{data.type}</span>
+          )}
+        </div>
       </div>
 
       <div className="node-body">
         <div className="node-ports">
-          <div className="port-column" style={{ minWidth: '50%' }}>
+          <div className="port-column">
             <div className="port-title">Inputs</div>
             {inputs
               .filter(input => !data.hidden_inputs?.includes(input.key))

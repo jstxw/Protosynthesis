@@ -173,6 +173,10 @@ export const useStore = create((set, get) => ({
     currentProjectId: null,
     currentWorkflowId: null,
     autoSaveTimer: null,
+    shouldFitView: false,
+    sidebarCollapsed: false,
+    reactIDEOpen: false,
+    chatPanelOpen: false,
 
     // --- THEME & EDITOR ---
     editorTheme: {
@@ -235,7 +239,7 @@ export const useStore = create((set, get) => ({
 
     onConnect: async (connection) => {
         const tempEdgeId = `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`;
-        const optimisticEdge = {...connection, id: tempEdgeId, type: 'straight'};
+        const optimisticEdge = {...connection, id: tempEdgeId, type: 'smoothstep'};
 
         set(state => {
             // Ensure inputs only have one connection by removing any existing edge to the target handle
@@ -286,6 +290,52 @@ export const useStore = create((set, get) => ({
             const initializedBlock = initializeBlockData(type, params);
             const flowNode = createFlowNode(initializedBlock);
 
+            // Special handling for API blocks with specific schemas
+            if (type === 'API' && params.schema_key && params.schema_key !== 'custom') {
+                try {
+                    // Call backend to process the schema
+                    const response = await apiClient.post('/v2/blocks/process-schema', {
+                        block: { ...flowNode.data, id: flowNode.id },
+                        schema_key: params.schema_key
+                    });
+
+                    const updatedBlock = response.data.block;
+
+                    // Update with processed data
+                    const normalizedNode = {
+                        ...flowNode,
+                        data: {
+                            ...flowNode.data,
+                            ...updatedBlock,
+                            inputs: normalizePortsToArray(updatedBlock.inputs, updatedBlock.input_meta),
+                            outputs: normalizePortsToArray(updatedBlock.outputs, updatedBlock.output_meta),
+                            hidden_inputs: updatedBlock.hidden_inputs || [],
+                            hidden_outputs: updatedBlock.hidden_outputs || []
+                        }
+                    };
+
+                    console.log("Adding API block with schema:", normalizedNode);
+                    set(state => ({nodes: [...state.nodes, normalizedNode]}));
+                    get().selectNode(normalizedNode.id);
+
+                    // Auto-save if in V2 mode
+                    if (currentProjectId && currentWorkflowId) {
+                        get().scheduleAutoSave();
+                    }
+
+                    return; // Exit early
+                } catch (error) {
+                    console.error('Failed to process schema for new block:', error);
+                    console.error('Error details:', {
+                        message: error?.message,
+                        code: error?.code,
+                        response: error?.response,
+                        stack: error?.stack
+                    });
+                    // Fall through to default handling on error
+                }
+            }
+
             // Normalize inputs/outputs to array format (create new object, don't mutate)
             const normalizedNode = {
                 ...flowNode,
@@ -312,7 +362,72 @@ export const useStore = create((set, get) => ({
     updateNode: async (nodeId, data) => {
         const { currentProjectId, currentWorkflowId } = get();
 
-        // Optimistic update first
+        // Special handling for API block schema changes
+        if (data.schema_key !== undefined) {
+            const node = get().nodes.find(n => n.id === nodeId);
+            if (node && node.data.type === 'API') {
+                try {
+                    // Call backend to process the schema change
+                    const response = await apiClient.post('/v2/blocks/process-schema', {
+                        block: { ...node.data, id: nodeId },
+                        schema_key: data.schema_key
+                    });
+
+                    const updatedBlock = response.data.block;
+
+                    // Helper to normalize ports
+                    const normalizePortsToArray = (portsData, metaData) => {
+                        if (Array.isArray(portsData)) return portsData;
+                        if (typeof portsData === 'object' && portsData !== null) {
+                            return Object.entries(portsData).map(([key, value]) => ({
+                                key,
+                                value,
+                                data_type: metaData?.[key]?.type || 'any'
+                            }));
+                        }
+                        return [];
+                    };
+
+                    // Update the node with processed data including inputs/outputs
+                    set(state => ({
+                        nodes: state.nodes.map(n => {
+                            if (n.id === nodeId) {
+                                return {
+                                    ...n,
+                                    data: {
+                                        ...n.data,
+                                        ...updatedBlock,
+                                        inputs: normalizePortsToArray(updatedBlock.inputs, updatedBlock.input_meta),
+                                        outputs: normalizePortsToArray(updatedBlock.outputs, updatedBlock.output_meta),
+                                        hidden_inputs: updatedBlock.hidden_inputs || [],
+                                        hidden_outputs: updatedBlock.hidden_outputs || []
+                                    }
+                                };
+                            }
+                            return n;
+                        })
+                    }));
+
+                    // Trigger auto-save after processing
+                    if (currentProjectId && currentWorkflowId) {
+                        get().scheduleAutoSave();
+                    }
+
+                    return; // Exit early since we handled the schema change
+                } catch (error) {
+                    console.error('Failed to process schema change:', error);
+                    console.error('Error details:', {
+                        message: error?.message,
+                        code: error?.code,
+                        response: error?.response,
+                        stack: error?.stack
+                    });
+                    // Fall through to default update on error
+                }
+            }
+        }
+
+        // Default optimistic update for non-schema changes or on error
         set(state => ({
             nodes: state.nodes.map(n => {
                 if (n.id === nodeId) {
@@ -566,9 +681,87 @@ export const useStore = create((set, get) => ({
         }
     },
 
+    // --- VALIDATION ---
+    validateWorkflow: () => {
+        const { nodes, apiSchemas } = get();
+        const errors = [];
+
+        nodes.forEach(node => {
+            const nodeData = node.data;
+            if (!nodeData) return;
+
+            // Skip non-API nodes
+            if (nodeData.type !== 'API') return;
+
+            const schemaKey = nodeData.schema_key;
+            const schema = apiSchemas[schemaKey];
+            if (!schema) return;
+
+            // Check all input sections (params, headers, body, path)
+            ['params', 'headers', 'body', 'path'].forEach(section => {
+                const schemaInputs = schema.inputs?.[section];
+                if (!schemaInputs) return;
+
+                Object.entries(schemaInputs).forEach(([fieldKey, fieldSchema]) => {
+                    // Check required fields
+                    if (fieldSchema.required) {
+                        const inputs = nodeData.inputs || [];
+                        const inputPort = inputs.find(p => p.key === fieldKey);
+                        const value = inputPort?.value;
+
+                        if (!value || (typeof value === 'string' && value.trim() === '')) {
+                            errors.push({
+                                nodeId: node.id,
+                                nodeName: nodeData.name || schemaKey,
+                                field: fieldKey,
+                                message: `Required field "${fieldKey}" is empty`
+                            });
+                        }
+
+                        // Check validation rules
+                        if (value && fieldSchema.validation) {
+                            const validation = fieldSchema.validation;
+                            const stringValue = String(value);
+
+                            if (validation.min_length && stringValue.length < validation.min_length) {
+                                errors.push({
+                                    nodeId: node.id,
+                                    nodeName: nodeData.name || schemaKey,
+                                    field: fieldKey,
+                                    message: `Field "${fieldKey}" must be at least ${validation.min_length} characters`
+                                });
+                            }
+
+                            if (validation.max_length && stringValue.length > validation.max_length) {
+                                errors.push({
+                                    nodeId: node.id,
+                                    nodeName: nodeData.name || schemaKey,
+                                    field: fieldKey,
+                                    message: `Field "${fieldKey}" must be at most ${validation.max_length} characters`
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+        });
+
+        return errors;
+    },
+
     // --- EXECUTION ---
     // Legacy executeGraph removed - use executeWorkflowV2 instead
     executeGraph: async () => {
+        // Validate before execution
+        const validationErrors = get().validateWorkflow();
+        if (validationErrors.length > 0) {
+            const errorMessages = validationErrors.map(e =>
+                `${e.nodeName}: ${e.message}`
+            ).join('\n');
+            alert(`Validation errors:\n\n${errorMessages}`);
+            return;
+        }
+
         console.warn('executeGraph (legacy) is deprecated. Use executeWorkflowV2 instead.');
         alert('Please use the Execute button with a project/workflow ID loaded.');
     },
@@ -776,6 +969,8 @@ export const useStore = create((set, get) => ({
 
             const flowEdges = workflow.data?.edges || [];
 
+            console.log('Setting workflow state with nodes:', flowNodes);
+
             set({
                 nodes: flowNodes,
                 edges: flowEdges,
@@ -784,6 +979,7 @@ export const useStore = create((set, get) => ({
             });
 
             console.log('✅ Workflow loaded successfully:', { nodes: flowNodes.length, edges: flowEdges.length });
+            console.log('Current store nodes after load:', get().nodes);
 
             // Auto-select React node if present
             const reactNode = flowNodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
@@ -812,6 +1008,8 @@ export const useStore = create((set, get) => ({
         }
 
         try {
+            console.log("Saving workflow with", nodes.length, "nodes");
+
             // Actually save to backend using the API client
             await apiClient.put(
                 `/v2/projects/${currentProjectId}/workflows/${currentWorkflowId}`,
@@ -823,10 +1021,10 @@ export const useStore = create((set, get) => ({
                 }
             );
 
-            console.log("Workflow saved successfully");
+            console.log("✅ Workflow saved successfully");
 
         } catch (error) {
-            console.error("Error saving workflow:", error);
+            console.error("❌ Error saving workflow:", error);
             // Don't throw - allow user to continue working
         }
     },
@@ -845,5 +1043,138 @@ export const useStore = create((set, get) => ({
         }, 2000);
 
         set({ autoSaveTimer: timer });
+    },
+
+    // Auto-layout nodes in a hierarchical grid
+    autoLayoutNodes: () => {
+        const { nodes, edges, currentProjectId, currentWorkflowId } = get();
+
+        if (nodes.length === 0) return;
+
+        // Simple hierarchical layout algorithm
+        const nodeMap = new Map(nodes.map(n => [n.id, { ...n, children: [], level: -1 }]));
+        const roots = [];
+
+        // Build tree structure based on edges
+        edges.forEach(edge => {
+            const parent = nodeMap.get(edge.source);
+            const child = nodeMap.get(edge.target);
+            if (parent && child) {
+                parent.children.push(child.id);
+            }
+        });
+
+        // Find root nodes (nodes with no incoming edges)
+        const nodesWithIncoming = new Set(edges.map(e => e.target));
+        nodes.forEach(node => {
+            if (!nodesWithIncoming.has(node.id)) {
+                roots.push(node.id);
+            }
+        });
+
+        // If no roots found (circular or no edges), treat all as roots
+        if (roots.length === 0) {
+            nodes.forEach(node => roots.push(node.id));
+        }
+
+        // Assign levels using BFS
+        const queue = roots.map(id => ({ id, level: 0 }));
+        const visited = new Set();
+
+        while (queue.length > 0) {
+            const { id, level } = queue.shift();
+            if (visited.has(id)) continue;
+            visited.add(id);
+
+            const node = nodeMap.get(id);
+            node.level = level;
+
+            node.children.forEach(childId => {
+                if (!visited.has(childId)) {
+                    queue.push({ id: childId, level: level + 1 });
+                }
+            });
+        }
+
+        // Group nodes by level
+        const levels = new Map();
+        nodeMap.forEach((node, id) => {
+            if (node.level === -1) node.level = 0; // Unconnected nodes go to level 0
+            if (!levels.has(node.level)) {
+                levels.set(node.level, []);
+            }
+            levels.get(node.level).push(id);
+        });
+
+        // Position nodes
+        const horizontalSpacing = 400;
+        const verticalSpacing = 200;
+        const startX = 150;
+        const startY = 100;
+
+        const layoutedNodes = nodes.map(node => {
+            const nodeData = nodeMap.get(node.id);
+            const levelNodes = levels.get(nodeData.level);
+            const indexInLevel = levelNodes.indexOf(node.id);
+            const levelWidth = levelNodes.length * horizontalSpacing;
+            const offsetX = (indexInLevel - (levelNodes.length - 1) / 2) * horizontalSpacing;
+
+            return {
+                ...node,
+                position: {
+                    x: startX + offsetX,
+                    y: startY + nodeData.level * verticalSpacing
+                }
+            };
+        });
+
+        set({ nodes: layoutedNodes, shouldFitView: true });
+
+        // Trigger auto-save
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
+        }
+    },
+
+    clearFitViewFlag: () => {
+        set({ shouldFitView: false });
+    },
+
+    clearBoard: () => {
+        const { currentProjectId, currentWorkflowId } = get();
+        set({ nodes: [], edges: [] });
+
+        // Trigger auto-save to persist the cleared state
+        if (currentProjectId && currentWorkflowId) {
+            get().scheduleAutoSave();
+        }
+    },
+
+    toggleSidebar: () => {
+        set(state => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+    },
+
+    toggleReactIDE: () => {
+        set(state => ({ reactIDEOpen: !state.reactIDEOpen }));
+    },
+
+    openReactIDE: () => {
+        set({ reactIDEOpen: true });
+    },
+
+    closeReactIDE: () => {
+        set({ reactIDEOpen: false });
+    },
+
+    toggleChatPanel: () => {
+        set(state => ({ chatPanelOpen: !state.chatPanelOpen }));
+    },
+
+    openChatPanel: () => {
+        set({ chatPanelOpen: true });
+    },
+
+    closeChatPanel: () => {
+        set({ chatPanelOpen: false });
     },
 }));

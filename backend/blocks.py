@@ -55,19 +55,25 @@ class Block(ABC):
         # This is mostly for frontend state, but good to track if we persist state.
         self.menu_open: bool = False
 
-    def register_input(self, key: str, data_type: str = "any", default_value: Any = None, hidden: bool = False):
-        """Defines an input slot for this block."""
+    def register_input(self, key: str, data_type: str = "any", default_value: Any = None, hidden: bool = False, **extra_meta):
+        """Defines an input slot for this block with optional metadata."""
         self.inputs[key] = default_value
-        self.input_meta[key] = {"data_type": data_type}
+        self.input_meta[key] = {
+            "data_type": data_type,
+            **extra_meta  # Include required, placeholder, description, validation, etc.
+        }
         self.input_connectors[key] = None
         if hidden:
             self.hidden_inputs.add(key)
 
-    def register_output(self, key: str, data_type: str = "any", hidden: bool = False):
-        """Defines an output slot for this block."""
+    def register_output(self, key: str, data_type: str = "any", hidden: bool = False, **extra_meta):
+        """Defines an output slot for this block with optional metadata."""
         self.outputs[key] = None
         self.output_connectors[key] = []
-        self.output_meta[key] = {"data_type": data_type}
+        self.output_meta[key] = {
+            "data_type": data_type,
+            **extra_meta  # Include format, description, etc.
+        }
         if hidden:
             self.hidden_outputs.add(key)
 

@@ -15,8 +15,10 @@ const AIAssistantPanel = ({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentMode, setCurrentMode] = useState("qa"); // "qa" or "agent"
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const chatPanelOpen = useStore((state) => state.chatPanelOpen);
+  const closeChatPanel = useStore((state) => state.closeChatPanel);
 
   // Get store methods for refreshing workflow
   const loadWorkflowFromV2 = useStore((state) => state.loadWorkflowFromV2);
@@ -52,10 +54,16 @@ const AIAssistantPanel = ({
     return actionKeywords.some((kw) => lowerMsg.includes(kw)) ? "agent" : "qa";
   };
 
-  // Quick action buttons
-  const quickActions = [
-
+  // Suggested prompts for empty state
+  const suggestedPrompts = [
+    { text: "How do I connect two blocks?", icon: "🔗" },
+    { text: "Create a new API block", icon: "✨" },
+    { text: "Explain this workflow", icon: "💡" },
+    { text: "What blocks are available?", icon: "📦" },
   ];
+
+  // Quick action buttons
+  const quickActions = [];
 
   const sendMessage = async (messageText = null) => {
     const textToSend = messageText || input;
@@ -174,12 +182,13 @@ const AIAssistantPanel = ({
     }
   };
 
+  // Don't render if chat panel is not open
+  if (!chatPanelOpen) {
+    return null;
+  }
+
   return (
-    <div
-      className={`ai-assistant-panel ${isCollapsed ? "collapsed" : ""}`}
-      onClick={isCollapsed ? () => setIsCollapsed(false) : undefined}
-      title={isCollapsed ? "Click to expand" : ""}
-    >
+    <div className="ai-assistant-panel">
       <div className="assistant-header">
         <div className="header-left">
           <h3>AI Assistant</h3> {/* Changed condition for "Ready" status */}
@@ -212,13 +221,10 @@ const AIAssistantPanel = ({
           </div>
           <button
             className="collapse-toggle"
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering panel onClick
-              setIsCollapsed(!isCollapsed);
-            }}
-            title={isCollapsed ? "Expand" : "Collapse"}
+            onClick={closeChatPanel}
+            title="Close"
           >
-            {isCollapsed ? "⬅" : "➡"}
+            ✕
           </button>
         </div>
       </div>
@@ -237,6 +243,23 @@ const AIAssistantPanel = ({
       </div>
 
       <div className="messages-container">
+        {messages.length === 0 && !isLoading && (
+          <div className="suggested-prompts">
+            <h4>Suggested prompts</h4>
+            <div className="prompts-grid">
+              {suggestedPrompts.map((prompt, i) => (
+                <button
+                  key={i}
+                  className="prompt-card"
+                  onClick={() => sendMessage(prompt.text)}
+                >
+                  <span className="prompt-icon">{prompt.icon}</span>
+                  <span className="prompt-text">{prompt.text}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.role}`}>
@@ -298,8 +321,6 @@ const AIAssistantPanel = ({
           <span>▲</span>
         </button>
       </div>
-
-      <div className="powered-by">Powered by Google Gemini & Moorcheh AI</div>
     </div>
   );
 };

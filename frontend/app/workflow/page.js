@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import ExecutionLog from '@/components/ExecutionLog';
 import AIAssistantPanel from '@/components/Assistant/AIAssistantPanel';
 import ReactIDE from '@/components/ReactIDE'; // Import new ReactIDE
+import ChatButton from '@/components/ChatButton';
 import { useStore } from '@/helpers/store';
 
 // Dynamically import client-only components to prevent SSR hydration errors.
@@ -40,13 +41,15 @@ export default function WorkflowPage() {
   }, [user, loading, router]);
 
   // Load workflow when project and workflow IDs are available
+  // Only load once when the IDs change, not when store functions update
   useEffect(() => {
     if (projectId && workflowId && user) {
       console.log('Loading workflow:', { projectId, workflowId });
       setCurrentWorkflow(projectId, workflowId);
       loadWorkflowFromV2(projectId, workflowId);
     }
-  }, [projectId, workflowId, user, loadWorkflowFromV2, setCurrentWorkflow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, workflowId, user]);
 
   if (loading) {
     return (
@@ -68,12 +71,11 @@ export default function WorkflowPage() {
           </main>
           <ExecutionLog />
         </div>
-        {/* Right side panel for React IDE */}
-        <div style={{ width: '400px', height: '100vh', borderLeft: '1px solid var(--border-color)', background: 'var(--surface-color)', position: 'relative' }}>
-          <ReactIDE />
-        </div>
 
-        {/* AI Assistant positioned at top-right */}
+        {/* React IDE as popup/modal */}
+        <ReactIDE />
+
+        {/* AI Assistant positioned at bottom-right */}
         <AIAssistantPanel
           currentNodes={currentNodeTypes}
           selectedNode={activeBlockId}
@@ -82,6 +84,9 @@ export default function WorkflowPage() {
           nodes={nodes}
           edges={edges}
         />
+
+        {/* Floating chat button */}
+        <ChatButton />
       </div>
     </ReactFlowProvider>
   );
