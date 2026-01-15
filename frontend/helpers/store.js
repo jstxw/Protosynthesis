@@ -705,14 +705,48 @@ export const useStore = create((set, get) => ({
     },
 
     saveWorkflowToV2: async () => {
-        const state = get();
+        const { nodes, edges, currentProjectId, currentWorkflowId, autoSaveTimer } = get();
 
-        // Clear existing timer
-        if (state.autoSaveTimer) {
-            clearTimeout(state.autoSaveTimer);
+        if (!currentProjectId || !currentWorkflowId) {
+            console.error("Cannot save: missing project or workflow ID");
+            return;
         }
 
-        // Schedule new save after 2 seconds of inactivity
+        // Clear existing timer
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            set({ autoSaveTimer: null });
+        }
+
+        try {
+            // Actually save to backend using the API client
+            await apiClient.put(
+                `/v2/projects/${currentProjectId}/workflows/${currentWorkflowId}`,
+                {
+                    data: {
+                        nodes: nodes,
+                        edges: edges
+                    }
+                }
+            );
+
+            console.log("Workflow saved successfully");
+
+        } catch (error) {
+            console.error("Error saving workflow:", error);
+            // Don't throw - allow user to continue working
+        }
+    },
+
+    scheduleAutoSave: () => {
+        const { autoSaveTimer } = get();
+
+        // Clear existing timer
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+        }
+
+        // Schedule save after 2 seconds of inactivity
         const timer = setTimeout(() => {
             get().saveWorkflowToV2();
         }, 2000);

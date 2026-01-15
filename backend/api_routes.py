@@ -1,7 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from auth_middleware import require_auth
 from project import Project
 import logging
+import json
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -146,3 +148,140 @@ def delete_workflow(current_user, project_id, workflow_id):
     except Exception as e:
         logger.error(f"Error deleting workflow: {e}", exc_info=True)
         return jsonify({"error": "Failed to delete workflow"}), 500
+
+
+# ==========================================
+# Missing Project Routes
+# ==========================================
+
+@api_v2.route('/projects/<project_id>', methods=['GET'])
+@require_auth
+def get_project_by_id(current_user, project_id):
+    """Get a specific project by ID."""
+    try:
+        user_id = current_user.get('sub')
+        from user_service import UserService
+        project = UserService.get_project(user_id, project_id)
+
+        if not project:
+            return jsonify({"error": "Project not found"}), 404
+
+        return jsonify({"project": project}), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching project: {e}", exc_info=True)
+        return jsonify({"error": "Failed to fetch project"}), 500
+
+
+@api_v2.route('/projects/<project_id>', methods=['PUT'])
+@require_auth
+def update_project_by_id(current_user, project_id):
+    """Update a specific project."""
+    try:
+        user_id = current_user.get('sub')
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        from user_service import UserService
+        success = UserService.update_project(user_id, project_id, data)
+
+        if not success:
+            return jsonify({"error": "Failed to update project"}), 404
+
+        return jsonify({"status": "updated"}), 200
+
+    except Exception as e:
+        logger.error(f"Error updating project: {e}", exc_info=True)
+        return jsonify({"error": "Failed to update project"}), 500
+
+
+@api_v2.route('/projects/<project_id>', methods=['DELETE'])
+@require_auth
+def delete_project_by_id(current_user, project_id):
+    """Delete a specific project."""
+    try:
+        user_id = current_user.get('sub')
+        from user_service import UserService
+        success = UserService.delete_project(user_id, project_id)
+
+        if not success:
+            return jsonify({"error": "Failed to delete project"}), 404
+
+        return jsonify({"status": "deleted"}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting project: {e}", exc_info=True)
+        return jsonify({"error": "Failed to delete project"}), 500
+
+
+@api_v2.route('/projects/<project_id>/workflows/<workflow_id>/execute', methods=['POST'])
+@require_auth
+def execute_workflow_by_id(current_user, project_id, workflow_id):
+    """Execute a specific workflow with streaming response."""
+    try:
+        user_id = current_user.get('sub')
+        data = request.get_json() or {}
+
+        # If nodes/edges not provided, fetch from database
+        if not data.get('nodes') or not data.get('edges'):
+            from user_service import UserService
+            workflow = UserService.get_workflow(user_id, project_id, workflow_id)
+            if not workflow:
+                return jsonify({"error": "Workflow not found"}), 404
+
+            data['nodes'] = workflow.get('data', {}).get('nodes', [])
+            data['edges'] = workflow.get('data', {}).get('edges', [])
+
+        data['workflow_id'] = workflow_id
+        data['project_id'] = project_id
+
+        # Use existing execution engine from main.py
+        def generate():
+            try:
+                # Import the execution engine function
+                from main import execute_graph
+                from main import StartBlock
+                from block_types.api_block import APIBlock
+                from block_types.logic_block import LogicBlock
+                from block_types.react_block import ReactBlock
+                from block_types.transform_block import TransformBlock
+                from block_types.start_block import StartBlock
+                from block_types.string_builder_block import StringBuilderBlock
+                from block_types.wait_block import WaitBlock
+                from block_types.dialogue_block import DialogueBlock
+                from block_types.api_key_block import ApiKeyBlock
+
+                # Reconstruct blocks from workflow data
+                # NOTE: This is a simplified version - full implementation would
+                # reconstruct the block graph from the workflow data
+                # For now, return an error message suggesting to use the main execute endpoint
+
+                error_event = {
+                    "status": "error",
+                    "message": "Workflow execution from v2 API not fully implemented yet. Please use the workflow editor to execute.",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                yield f"data: {json.dumps(error_event)}\n\n"
+
+            except Exception as e:
+                error_event = {
+                    "status": "error",
+                    "message": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                yield f"data: {json.dumps(error_event)}\n\n"
+
+        return Response(
+            generate(),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no'
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error executing workflow: {e}", exc_info=True)
+        return jsonify({"error": "Failed to execute workflow"}), 500

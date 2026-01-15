@@ -17,10 +17,9 @@ SUPABASE_URL = os.getenv('SUPABASE_URL')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Debug: Print configuration
+# Configuration validation (NEVER log the actual secret)
 if SUPABASE_JWT_SECRET:
-    secret_preview = SUPABASE_JWT_SECRET[:10] + "..." + SUPABASE_JWT_SECRET[-10:] if len(SUPABASE_JWT_SECRET) > 20 else "***"
-    logger.info(f"🔑 JWT Secret loaded: {secret_preview} (length: {len(SUPABASE_JWT_SECRET)})")
+    logger.info("✅ JWT authentication configured")
 else:
     logger.warning("❌ Supabase JWT Secret (HS256) is NOT configured!")
 

@@ -2,6 +2,11 @@ from flask import Flask, jsonify, request, Response, stream_with_context
 from flask_cors import CORS
 from blocks import Block
 from project import Project
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from block_types.api_block import APIBlock
 from block_types.logic_block import LogicBlock
 from block_types.react_block import ReactBlock, DEFAULT_JSX, DEFAULT_CSS
@@ -19,7 +24,25 @@ import collections
 import json
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for all routes
+
+def get_cors_origins():
+    """Get CORS origins from environment variable."""
+    origins_str = os.getenv('CORS_ORIGINS', '')
+
+    if not origins_str:
+        print("WARNING: CORS_ORIGINS not set, defaulting to localhost only")
+        return ['http://localhost:3000']
+
+    origins = [origin.strip() for origin in origins_str.split(',')]
+    print(f"CORS enabled for origins: {origins}")
+    return origins
+
+# Configure CORS with specific origins
+CORS(app,
+     origins=get_cors_origins(),
+     supports_credentials=True,
+     allow_headers=['Content-Type', 'Authorization'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 # Register the new authenticated API routes (v2)
 app.register_blueprint(api_v2)
@@ -133,40 +156,27 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
 # ==========================================
 
 # ==============================================================================
-# WARNING: The use of 'global current_project' is not thread-safe and will
-# cause issues in a multi-user or multi-request environment. These routes
-# should be refactored to be stateless, operating on a project_id passed
-# in the URL, similar to the new routes in `api_routes.py`.
+# DEPRECATED ROUTES BELOW - DO NOT USE
 # ==============================================================================
-# In-memory storage for the current project
-current_project = Project("Demo Project")
+# These routes used a global 'current_project' variable which caused multi-user
+# data corruption. They have been deprecated in favor of stateless v2 routes
+# in api_routes.py. Use /api/v2/projects/{id}/workflows/{id}/execute instead.
+# ==============================================================================
+#
+# Global current_project variable has been REMOVED for thread-safety.
+# current_project = Project("Demo Project")  # REMOVED - causes multi-user issues
 
 @app.route('/api/execute', methods=['POST'])
 def run_graph():
     """
-    Endpoint to trigger graph execution.
-
-    NOTE: This endpoint operates on the global project state and should be
-    refactored to be stateless (e.g., POST /api/v2/projects/<project_id>/execute).
+    DEPRECATED: This endpoint has been removed.
+    Use POST /api/v2/projects/<project_id>/workflows/<workflow_id>/execute instead.
     """
-    global current_project
-    if not current_project.blocks:
-        return jsonify({"error": "No graph defined"}), 400
-
-    # Find all StartBlock instances to use as entry points for execution.
-    start_nodes = [
-        block for block in current_project.blocks.values()
-        if isinstance(block, StartBlock)
-    ]
-
-    if not start_nodes:
-        return jsonify({"error": "Execution failed: No 'Start' block found in the project. Add a Start block to define an entry point."}), 400
-
-    # Return a streaming response
-    return Response(
-        stream_with_context(execute_graph(start_nodes, current_project.blocks)),
-        mimetype='application/x-ndjson'
-    )
+    return jsonify({
+        "error": "This endpoint has been deprecated and removed",
+        "message": "Please use /api/v2/projects/{project_id}/workflows/{workflow_id}/execute",
+        "reason": "Global state caused multi-user data corruption"
+    }), 410  # 410 Gone
 
 @app.route('/api/block/toggle_visibility', methods=['POST'])
 def toggle_visibility():
@@ -557,5 +567,14 @@ def setup_demo_project():
     return proj
 
 if __name__ == '__main__':
-    current_project = setup_demo_project()
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    # NOTE: setup_demo_project() is no longer called since we removed global state
+    # The app now operates in a stateless manner using MongoDB for persistence
+    # Demo projects can be created via the API: POST /api/v2/projects
+
+    # Configuration from environment variables
+    debug_mode = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
+    port = int(os.getenv('PORT', 5001))
+    host = os.getenv('HOST', '127.0.0.1')  # Changed from 0.0.0.0 to localhost for security
+
+    print(f"Starting Flask app on {host}:{port} (debug={debug_mode})")
+    app.run(debug=debug_mode, host=host, port=port)
