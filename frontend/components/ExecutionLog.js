@@ -4,6 +4,7 @@ import { useStore } from '../helpers/store';
 const ExecutionLog = () => {
   const { executionLogs } = useStore();
   const [visible, setVisible] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // Automatically show the log window when new logs arrive
   useEffect(() => {
@@ -17,19 +18,31 @@ const ExecutionLog = () => {
   }
 
   return (
-    <div className="execution-log-window">
-      <div className="execution-log-header">
-        <span>Execution Log</span>
-        <button className="close-log-button" onClick={() => setVisible(false)}>&times;</button>
-      </div>
-      <div className="execution-log-content">
-        {executionLogs.map((log, index) => (
-          <div key={index} className="log-entry">
-            {log}
+    <>
+      {expanded && <div className="execution-log-backdrop" onClick={() => setExpanded(false)} />}
+      <div className={`execution-log-window ${expanded ? 'expanded' : ''}`}>
+        <div className="execution-log-header">
+          <span>Execution Log</span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              className="expand-log-button"
+              onClick={() => setExpanded(!expanded)}
+              title={expanded ? "Minimize" : "Expand"}
+            >
+              {expanded ? '⊟' : '⊞'}
+            </button>
+            <button className="close-log-button" onClick={() => setVisible(false)}>&times;</button>
           </div>
-        ))}
+        </div>
+        <div className="execution-log-content">
+          {executionLogs.map((log, index) => (
+            <div key={index} className="log-entry">
+              {log}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

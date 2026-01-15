@@ -19,7 +19,7 @@ const getIconForType = (type) => {
     case 'TRANSFORM': return '/shuffle.svg';
     case 'API_KEY': return '/key.svg';
     case 'WAIT': return '/clock.svg';
-    case 'API': return '/window.svg';
+    case 'API': return '/api-minimal.svg';
     case 'DIALOGUE': return '/chat.svg';
     default: return null;
   }
@@ -36,7 +36,10 @@ const CustomNode = ({ data }) => {
   const edges = useStore((s) => s.edges);
   const activeBlockId = useStore((s) => s.activeBlockId);
   const openReactIDE = useStore((s) => s.openReactIDE);
+  const testApiBlock = useStore((s) => s.testApiBlock);
   const [name, setName] = useState(data.name || '');
+  const [isTestingApi, setIsTestingApi] = useState(false);
+  const [testStatus, setTestStatus] = useState(null); // 'success' | 'error' | null
 
   // Ensure inputs and outputs are always arrays (use constant empty array for stable reference)
   const inputs = Array.isArray(data.inputs) ? data.inputs : EMPTY_ARRAY;
@@ -59,6 +62,22 @@ const CustomNode = ({ data }) => {
   const handleFieldsChange = (e) => updateNode(data.id, { fields: e.target.value });
   const handleDelayChange = (e) => updateNode(data.id, { delay: e.target.value });
   const handleApiKeySelectChange = (e) => updateNode(data.id, { selected_key: e.target.value });
+
+  const handleTestApi = async () => {
+    setIsTestingApi(true);
+    setTestStatus(null);
+
+    try {
+      await testApiBlock(data.id);
+      setTestStatus('success');
+      setTimeout(() => setTestStatus(null), 3000);
+    } catch (error) {
+      setTestStatus('error');
+      setTimeout(() => setTestStatus(null), 3000);
+    } finally {
+      setIsTestingApi(false);
+    }
+  };
 
   const getHeaderClass = () => {
     // For API blocks, use category-based coloring
@@ -275,6 +294,24 @@ const CustomNode = ({ data }) => {
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {data.type === 'API' && !data.menu_open && (
+            <button
+              className="test-api-button nodrag"
+              onClick={handleTestApi}
+              disabled={isTestingApi}
+              title="Test API with current values"
+            >
+              {isTestingApi ? (
+                <span className="test-spinner">⏳</span>
+              ) : testStatus === 'success' ? (
+                <span className="test-success">✓</span>
+              ) : testStatus === 'error' ? (
+                <span className="test-error">✗</span>
+              ) : (
+                '▶'
+              )}
+            </button>
+          )}
           {data.type === 'REACT' && !data.menu_open && (
             <button
               className="edit-react-button nodrag"

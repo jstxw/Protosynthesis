@@ -44,26 +44,3 @@
   width: 30px;
   height: 30px;
 }
-
-/* Pulse effect to draw attention */
-.floating-chat-button::before {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: var(--border-color, #a1887f);
-  animation: pulse 2s infinite;
-  z-index: -1;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0;
-  }
-}

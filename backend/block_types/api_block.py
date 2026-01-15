@@ -1,6 +1,8 @@
 import requests
 import json
 import base64
+import re
+import time
 from blocks import Block
 from api_schemas import API_SCHEMAS
 from typing import Set
@@ -25,6 +27,63 @@ def _get_nested_value(data, path):
         if current is None:
             return None
     return current
+
+def detect_response_fields(response_data, prefix="", max_depth=5, current_depth=0):
+    """
+    Recursively traverse JSON response to detect all leaf fields.
+    Returns a list of field definitions with dot-notation paths.
+
+    Args:
+        response_data: The JSON response to analyze
+        prefix: Current path prefix (for recursion)
+        max_depth: Maximum recursion depth to prevent infinite loops
+        current_depth: Current recursion level
+
+    Returns:
+        List of dicts: [{"key": "data.user.email", "type": "string", "sample": "user@example.com"}, ...]
+    """
+    if current_depth >= max_depth:
+        return []
+
+    detected_fields = []
+
+    if isinstance(response_data, dict):
+        for key, value in response_data.items():
+            # Sanitize key to valid Python identifier
+            sanitized_key = re.sub(r'[^a-zA-Z0-9_]', '_', key)
+            new_prefix = f"{prefix}.{sanitized_key}" if prefix else sanitized_key
+
+            if isinstance(value, (dict, list)):
+                # Recurse into nested structures
+                detected_fields.extend(
+                    detect_response_fields(value, new_prefix, max_depth, current_depth + 1)
+                )
+            else:
+                # Leaf value - determine type
+                field_type = "string"
+                if isinstance(value, bool):
+                    field_type = "boolean"
+                elif isinstance(value, (int, float)):
+                    field_type = "number"
+                elif value is None:
+                    field_type = "any"
+
+                detected_fields.append({
+                    "key": new_prefix,
+                    "type": field_type,
+                    "sample": str(value)[:100] if value is not None else None,
+                    "path": new_prefix
+                })
+
+    elif isinstance(response_data, list) and len(response_data) > 0:
+        # For arrays, analyze first element as sample
+        sample_item = response_data[0]
+        new_prefix = f"{prefix}.0" if prefix else "0"
+        detected_fields.extend(
+            detect_response_fields(sample_item, new_prefix, max_depth, current_depth + 1)
+        )
+
+    return detected_fields
 
 class APIBlock(Block):
     """

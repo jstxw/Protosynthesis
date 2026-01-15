@@ -3,6 +3,7 @@ from auth_middleware import require_auth
 from project import Project
 import logging
 import json
+import time
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,121 @@ def process_block_schema(current_user):
     except Exception as e:
         logger.error(f"Error processing block schema: {e}", exc_info=True)
         return jsonify({"error": "Failed to process block schema"}), 500
+
+
+# ==========================================
+# Block Testing
+# ==========================================
+
+@api_v2.route('/blocks/test-api', methods=['POST'])
+@require_auth
+def test_api_block(current_user):
+    """
+    Tests an API block with current input values and returns response with detected fields.
+
+    Expected payload:
+    {
+        "block": {
+            "id": "block_123",
+            "name": "My API Block",
+            "schema_key": "custom",
+            "url": "https://api.example.com",
+            "method": "GET",
+            "inputs": [
+                {"key": "trigger", "value": true},
+                {"key": "url", "value": "https://api.example.com"},
+                ...
+            ]
+        },
+        "auto_detect": true
+    }
+
+    Returns:
+    {
+        "success": true,
+        "status_code": 200,
+        "latency_ms": 245,
+        "response": {...},
+        "detected_fields": [...],
+        "error": null
+    }
+    """
+    try:
+        data = request.json
+        block_data = data.get("block")
+        auto_detect = data.get("auto_detect", True)
+
+        if not block_data:
+            return jsonify({"error": "Missing block data"}), 400
+
+        from block_types.api_block import APIBlock, detect_response_fields
+
+        # Create temporary APIBlock instance
+        temp_block = APIBlock(
+            name=block_data.get("name", "Test Block"),
+            schema_key=block_data.get("schema_key", "custom"),
+            x=0,
+            y=0
+        )
+        temp_block.id = block_data.get("id", temp_block.id)
+        temp_block.url = block_data.get("url", "")
+        temp_block.method = block_data.get("method", "GET")
+
+        # Inject input values from block_data
+        input_list = block_data.get("inputs", [])
+        for input_item in input_list:
+            key = input_item.get("key")
+            value = input_item.get("value")
+            if key in temp_block.inputs:
+                temp_block.inputs[key] = value
+
+        # Measure latency
+        start_time = time.time()
+
+        # Execute the block
+        temp_block.execute()
+
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        # Check for errors
+        error_output = temp_block.outputs.get("error")
+        if error_output:
+            return jsonify({
+                "success": False,
+                "status_code": temp_block.outputs.get("status_code"),
+                "latency_ms": latency_ms,
+                "response": temp_block.outputs.get("response_json"),
+                "detected_fields": [],
+                "error": error_output
+            }), 200  # Return 200 with error info in body
+
+        # Success - get response
+        response_json = temp_block.outputs.get("response_json")
+        status_code = temp_block.outputs.get("status_code")
+
+        # Detect fields if requested
+        detected_fields = []
+        if auto_detect and response_json:
+            try:
+                detected_fields = detect_response_fields(response_json)
+            except Exception as e:
+                logger.warning(f"Failed to detect fields: {e}")
+
+        return jsonify({
+            "success": True,
+            "status_code": status_code,
+            "latency_ms": latency_ms,
+            "response": response_json,
+            "detected_fields": detected_fields,
+            "error": None
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error testing API block: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Test execution failed: {str(e)}"
+        }), 500
 
 
 # ==========================================

@@ -749,6 +749,113 @@ export const useStore = create((set, get) => ({
         return errors;
     },
 
+    // --- TEST API BLOCK ---
+    testApiBlock: async (nodeId) => {
+        const { nodes, currentProjectId, currentWorkflowId } = get();
+        const node = nodes.find(n => n.id === nodeId);
+
+        if (!node || node.data.type !== 'API') {
+            console.error('Cannot test: node not found or not an API block');
+            return;
+        }
+
+        // Log test start
+        set(state => ({
+            executionLogs: [
+                ...(state.executionLogs || []),
+                `▶ Testing API: ${node.data.name}...`
+            ]
+        }));
+
+        try {
+            const blockData = {
+                id: node.id,
+                name: node.data.name,
+                schema_key: node.data.schema_key || 'custom',
+                url: node.data.url || '',
+                method: node.data.method || 'GET',
+                inputs: node.data.inputs || []
+            };
+
+            const response = await apiClient.post('/v2/blocks/test-api', {
+                block: blockData,
+                auto_detect: true
+            });
+
+            const result = response.data;
+
+            if (result.success) {
+                const fieldCount = result.detected_fields?.length || 0;
+                set(state => ({
+                    executionLogs: [
+                        ...state.executionLogs,
+                        `✅ API test successful (${result.status_code}) - ${result.latency_ms}ms`,
+                        `📊 Detected ${fieldCount} response fields`
+                    ]
+                }));
+
+                // Auto-create output ports
+                if (result.detected_fields && result.detected_fields.length > 0) {
+                    set(state => ({
+                        nodes: state.nodes.map(n => {
+                            if (n.id === nodeId) {
+                                const coreOutputKeys = ['response_json', 'status_code', 'error'];
+                                const coreOutputs = n.data.outputs.filter(o =>
+                                    coreOutputKeys.includes(o.key)
+                                );
+
+                                const detectedOutputs = result.detected_fields.map(field => ({
+                                    key: field.key,
+                                    value: null,
+                                    data_type: field.type,
+                                    path: field.path,
+                                    description: `Auto-detected (sample: ${field.sample})`
+                                }));
+
+                                return {
+                                    ...n,
+                                    data: {
+                                        ...n.data,
+                                        outputs: [...coreOutputs, ...detectedOutputs]
+                                    }
+                                };
+                            }
+                            return n;
+                        })
+                    }));
+
+                    if (currentProjectId && currentWorkflowId) {
+                        get().scheduleAutoSave();
+                    }
+
+                    set(state => ({
+                        executionLogs: [
+                            ...state.executionLogs,
+                            `🔄 Auto-created ${fieldCount} output ports`
+                        ]
+                    }));
+                }
+            } else {
+                set(state => ({
+                    executionLogs: [
+                        ...state.executionLogs,
+                        `❌ API test failed: ${result.error}`,
+                        result.status_code ? `   Status: ${result.status_code}` : ''
+                    ].filter(Boolean)
+                }));
+            }
+
+        } catch (error) {
+            console.error('Test API error:', error);
+            set(state => ({
+                executionLogs: [
+                    ...state.executionLogs,
+                    `❌ Test failed: ${error?.message || 'Network error'}`
+                ]
+            }));
+        }
+    },
+
     // --- EXECUTION ---
     // Legacy executeGraph removed - use executeWorkflowV2 instead
     executeGraph: async () => {
