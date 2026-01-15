@@ -3,6 +3,7 @@ import ReactFlow, {Background, Controls, MiniMap, useReactFlow, ControlButton} f
 import 'reactflow/dist/style.css';
 import {useStore} from '../helpers/store';
 import CustomNode from './CustomNode';
+import CustomEdge from './CustomEdge';
 
 const connectionLineStyle = { stroke: '#ffffff', strokeWidth: 3 };
 
@@ -27,8 +28,9 @@ const FlowCanvas = () => {
         clearBoard
     } = useStore();
     const {screenToFlowPosition, fitView} = useReactFlow();
-    // Define our custom node type
+    // Define our custom node and edge types
     const nodeTypes = useMemo(() => ({custom: CustomNode}), []);
+    const edgeTypes = useMemo(() => ({default: CustomEdge}), []);
 
     // Fetch API schemas when the component mounts
     useEffect(() => {
@@ -92,6 +94,7 @@ const FlowCanvas = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodeContextMenu={handleNodeContextMenu}
             onNodeClick={handleNodeClick}
             onDrop={onDrop}
@@ -100,11 +103,11 @@ const FlowCanvas = () => {
             onPaneClick={() => selectNode(null)}
             onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
             onNodeMouseLeave={() => setHoveredNodeId(null)}
-            connectionLineType="smoothstep"
+            connectionLineType="default"
             connectionLineStyle={connectionLineStyle}
             snapToGrid={true}
             snapGrid={[25, 25]}
-            defaultEdgeOptions={{ type: 'smoothstep', animated: false }}
+            defaultEdgeOptions={{ type: 'default', animated: false }}
             fitView
         >
             <Background id="grid-minor" variant="lines" gap={25} size={1} color="rgba(255, 255, 255, 0.05)" />

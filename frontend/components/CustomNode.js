@@ -61,6 +61,13 @@ const CustomNode = ({ data }) => {
   const handleApiKeySelectChange = (e) => updateNode(data.id, { selected_key: e.target.value });
 
   const getHeaderClass = () => {
+    // For API blocks, use category-based coloring
+    if (data.type === 'API' && data.schema_key) {
+      const schema = apiSchemas[data.schema_key];
+      const category = schema?.category?.toLowerCase() || 'other';
+      return `node-header-api-${category}`;
+    }
+
     switch (data.type) {
       case 'API': return 'node-header-api';
       case 'START': return 'node-header-start';

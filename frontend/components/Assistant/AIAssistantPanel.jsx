@@ -216,9 +216,6 @@ const AIAssistantPanel = ({
           )}
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <div className="ai-mode-indicator">
-            {currentMode === "qa" ? "Q&A" : "Agent"}
-          </div>
           <button
             className="collapse-toggle"
             onClick={closeChatPanel}

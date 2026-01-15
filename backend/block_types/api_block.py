@@ -235,6 +235,11 @@ class APIBlock(Block):
         data['schema_key'] = self.schema_key
         data['url'] = self.url
         data['method'] = self.method
+
+        # Add category for frontend color coding
+        schema = API_SCHEMAS.get(self.schema_key, {})
+        data['category'] = schema.get('category', 'other')
+
         return data
 
     def _clear_dynamic_inputs(self):

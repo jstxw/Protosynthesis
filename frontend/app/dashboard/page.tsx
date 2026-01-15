@@ -394,11 +394,11 @@ export function Dashboard() {
               className="dashboard-modal-content"
             >
               <div style={{ padding: '24px' }}>
-                <div>
+                <div style={{ marginBottom: '24px' }}>
                   <label
                     htmlFor="project-name"
                     className="block text-[13px] font-bold text-[var(--node-text-color)]"
-                    style={{ marginBottom: '12px' }}
+                    style={{ marginBottom: '16px', display: 'block' }}
                   >
                     Project Name
                   </label>
@@ -419,7 +419,7 @@ export function Dashboard() {
                   </div>
                 )}
 
-                <div className="flex justify-end" style={{ marginTop: '16px', gap: '12px' }}>
+                <div className="flex justify-end" style={{ marginTop: '24px', gap: '24px' }}>
                   <button
                     onClick={() => setShowNewProjectModal(false)}
                     className="px-4 py-2 rounded text-[var(--node-text-color)] text-[13px] font-medium hover:bg-[var(--item-bg-color)] transition-colors"

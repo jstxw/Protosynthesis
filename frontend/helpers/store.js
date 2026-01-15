@@ -239,7 +239,7 @@ export const useStore = create((set, get) => ({
 
     onConnect: async (connection) => {
         const tempEdgeId = `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`;
-        const optimisticEdge = {...connection, id: tempEdgeId, type: 'smoothstep'};
+        const optimisticEdge = {...connection, id: tempEdgeId, type: 'default'};
 
         set(state => {
             // Ensure inputs only have one connection by removing any existing edge to the target handle
