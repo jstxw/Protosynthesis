@@ -443,3 +443,33 @@ def execute_workflow_by_id(current_user, project_id, workflow_id):
     except Exception as e:
         logger.error(f"Error executing workflow: {e}", exc_info=True)
         return jsonify({"error": "Failed to execute workflow"}), 500
+
+
+@api_v2.route('/available-api-keys', methods=['GET'])
+def get_available_api_keys():
+    """Returns a list of available API keys from environment variables."""
+    try:
+        import os
+        from dotenv import load_dotenv
+        from block_types.api_key_block import ENV_KEY_PREFIX
+
+        # Reload env vars to ensure we have the latest
+        load_dotenv()
+
+        keys = []
+        for env_var in os.environ:
+            if env_var.startswith(ENV_KEY_PREFIX):
+                # Store the key name without the prefix
+                keys.append(env_var[len(ENV_KEY_PREFIX):])
+
+        logger.info(f"Found {len(keys)} API keys with prefix {ENV_KEY_PREFIX}")
+
+        return jsonify({
+            "available_keys": sorted(keys)
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching available API keys: {e}", exc_info=True)
+        return jsonify({
+            "error": "Failed to fetch API keys",
+            "available_keys": []
+        }), 500

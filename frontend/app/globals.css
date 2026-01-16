@@ -517,7 +517,8 @@ textarea::placeholder {
 }
 
 /* Darker muted text on paper */
-.port input {
+.port input,
+.port select {
     width: 120px;
     max-width: 120px;
     flex-shrink: 0;
@@ -527,6 +528,16 @@ textarea::placeholder {
     border: 1px solid var(--input-border-color);
     color: var(--node-text-color);
     border-radius: 2px;
+}
+
+.port select {
+    cursor: pointer;
+    padding-right: 20px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 12px;
 }
 
 .node-config {
@@ -993,8 +1004,8 @@ textarea::placeholder {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    width: 500px;
-    max-height: 350px;
+    width: 700px;
+    max-height: 500px;
     background: var(--surface-color);
     border: none;
     border-radius: 6px;
@@ -1007,8 +1018,8 @@ textarea::placeholder {
 }
 
 .execution-log-window.expanded {
-    width: 800px;
-    max-height: 600px;
+    width: 1000px;
+    max-height: 700px;
     bottom: 50%;
     right: 50%;
     transform: translate(50%, 50%);
@@ -1030,15 +1041,19 @@ textarea::placeholder {
 .execution-log-content {
     padding: 12px;
     overflow-y: auto;
+    overflow-x: auto;
     font-family: monospace;
     font-size: 12px;
     flex: 1;
 }
 
 .log-entry {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     color: inherit;
-    line-height: 1.5;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 .expand-log-button {
@@ -1439,9 +1454,8 @@ textarea::placeholder {
   filter: brightness(90%);
 }
 
-/* Hover Outline Effect & Active Execution Effect */
-.custom-node:hover::before,
-.active-block::before {
+/* Hover Outline Effect */
+.custom-node:hover::before {
     content: '';
     position: absolute;
     top: -6px;
@@ -1449,9 +1463,36 @@ textarea::placeholder {
     right: -6px;
     bottom: -6px;
     border: 3px solid var(--primary-color);
-    border-radius: 14px 14px 4px 4px; /* Matches node radius + offset */
+    border-radius: 14px 14px 4px 4px;
     pointer-events: none;
     z-index: -1;
+}
+
+/* Active Execution Effect - Green Glow */
+.active-block::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border: 4px solid #4ade80;
+    border-radius: 14px 14px 4px 4px;
+    pointer-events: none;
+    z-index: -1;
+    box-shadow: 0 0 30px rgba(74, 222, 128, 0.6), inset 0 0 20px rgba(74, 222, 128, 0.2);
+    animation: activeBlockPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes activeBlockPulse {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(74, 222, 128, 0.6), inset 0 0 20px rgba(74, 222, 128, 0.2);
+        border-color: #4ade80;
+    }
+    50% {
+        box-shadow: 0 0 50px rgba(74, 222, 128, 0.9), inset 0 0 30px rgba(74, 222, 128, 0.4);
+        border-color: #22c55e;
+    }
 }
 
 /* UI Node (Generic Node Card) */
@@ -1558,4 +1599,31 @@ textarea::placeholder {
     opacity: 0.9;
     filter: brightness(0.2); /* Make icon darker for contrast */
     font-size: 20px;
+}
+
+/* Page Transition Animations */
+@keyframes pageTransitionFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pageTransitionFadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.page-transition-enter {
+    animation: pageTransitionFadeIn 0.3s ease-in-out;
+}
+
+.page-transition-exit {
+    animation: pageTransitionFadeOut 0.3s ease-in-out;
 }

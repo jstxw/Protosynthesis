@@ -81,6 +81,8 @@ export function Dashboard() {
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectName, setEditingProjectName] = useState('');
 
   // Check authentication
   useEffect(() => {
@@ -155,6 +157,19 @@ export function Dashboard() {
       setError(errorMessage);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleUpdateProjectName = async (projectId: string) => {
+    if (!editingProjectName.trim()) return;
+    try {
+      await projectService.updateProject(projectId, { name: editingProjectName });
+      await fetchProjects();
+      setEditingProjectId(null);
+      setEditingProjectName('');
+    } catch (err: any) {
+      console.error('Failed to update project:', err);
+      alert('Failed to update project name');
     }
   };
 
@@ -254,42 +269,99 @@ export function Dashboard() {
             <div className="dashboard-sidebar-empty">Loading...</div>
           ) : filteredProjects.length > 0 ? (
             filteredProjects.map((project) => (
-              <button
+              <div
                 key={project.id}
-                onClick={async () => {
-                  try {
-                    // Fetch workflows for this project
-                    let workflows = await workflowService.getAllWorkflows(project.id);
-
-                    // If no workflows exist, create one
-                    if (workflows.length === 0) {
-                      console.log('No workflows found, creating default workflow...');
-                      const newWorkflow = await workflowService.createWorkflow(project.id, {
-                        name: 'Main Workflow',
-                        data: { nodes: [], edges: [] }
-                      });
-                      workflows = [newWorkflow];
-                    }
-
-                    // Navigate with both project and workflow IDs
-                    router.push(`/workflow?project=${project.id}&workflow=${workflows[0].workflow_id}`);
-                  } catch (error) {
-                    console.error('Error loading project:', error);
-                    alert('Failed to load project. Please try again.');
-                  }
-                }}
                 className="dashboard-project-item"
               >
-                <div className="dashboard-project-icon">
-                  <Database size={16} />
-                </div>
-                <div className="dashboard-project-details">
-                  <div className="dashboard-project-name">{project.name}</div>
-                  <div className="dashboard-project-meta">
-                    {project.nodeCount} nodes · {formatRelativeTime(project.updatedAt)}
-                  </div>
-                </div>
-              </button>
+                {editingProjectId === project.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editingProjectName}
+                      onChange={(e) => setEditingProjectName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleUpdateProjectName(project.id);
+                        } else if (e.key === 'Escape') {
+                          setEditingProjectId(null);
+                          setEditingProjectName('');
+                        }
+                      }}
+                      className="flex-1 px-2 py-1 text-[12px] bg-[var(--input-bg-color)] border border-[var(--color-blue)] rounded text-[var(--node-text-color)] focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleUpdateProjectName(project.id)}
+                      className="p-1 hover:bg-[var(--item-bg-color)] rounded transition-colors"
+                      title="Save"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingProjectId(null);
+                        setEditingProjectName('');
+                      }}
+                      className="p-1 hover:bg-[var(--item-bg-color)] rounded transition-colors"
+                      title="Cancel"
+                    >
+                      <X size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="dashboard-project-content">
+                      <div className="dashboard-project-header">
+                        <button
+                          onClick={async () => {
+                            try {
+                              // Fetch workflows for this project
+                              let workflows = await workflowService.getAllWorkflows(project.id);
+
+                              // If no workflows exist, create one
+                              if (workflows.length === 0) {
+                                console.log('No workflows found, creating default workflow...');
+                                const newWorkflow = await workflowService.createWorkflow(project.id, {
+                                  name: 'Main Workflow',
+                                  data: { nodes: [], edges: [] }
+                                });
+                                workflows = [newWorkflow];
+                              }
+
+                              // Navigate with both project and workflow IDs
+                              router.push(`/workflow?project=${project.id}&workflow=${workflows[0].workflow_id}`);
+                            } catch (error) {
+                              console.error('Error loading project:', error);
+                              alert('Failed to load project. Please try again.');
+                            }
+                          }}
+                          className="flex items-center gap-2 text-left"
+                          style={{ background: 'none', border: 'none', padding: 0, flex: 1 }}
+                        >
+                          <div className="dashboard-project-name">{project.name}</div>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProjectId(project.id);
+                            setEditingProjectName(project.name);
+                          }}
+                          className="p-1 hover:bg-[var(--item-bg-color)] rounded transition-colors"
+                          title="Edit name"
+                          style={{ opacity: 0.6, flexShrink: 0 }}
+                          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+                        >
+                          <MoreVertical size={14} />
+                        </button>
+                      </div>
+                      <div className="dashboard-project-meta">
+                        {project.nodeCount} nodes · {formatRelativeTime(project.updatedAt)}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             ))
           ) : (
             <div className="dashboard-sidebar-empty">
@@ -390,14 +462,14 @@ export function Dashboard() {
               typeBadge="MENU"
               icon={Plus}
               headerColorClass="node-header-start"
-              width="500px"
+              width="400px"
               className="dashboard-modal-content"
             >
-              <div style={{ padding: '24px' }}>
-                <div style={{ marginBottom: '24px' }}>
+              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <div style={{ marginBottom: '24px', maxWidth: '320px' }}>
                   <label
                     htmlFor="project-name"
-                    className="block text-[13px] font-bold text-[var(--node-text-color)]"
+                    className="text-[13px] font-bold text-[var(--node-text-color)]"
                     style={{ marginBottom: '16px', display: 'block' }}
                   >
                     Project Name
@@ -408,21 +480,22 @@ export function Dashboard() {
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="My Awesome Workflow"
-                    className="w-full p-3 text-[13px] bg-[var(--input-bg-color)] border border-[var(--input-border-color)] rounded text-[var(--node-text-color)] focus:outline-none focus:border-[var(--color-blue)]"
+                    style={{ width: '320px' }}
+                    className="p-3 text-[13px] bg-[var(--input-bg-color)] border border-[var(--input-border-color)] rounded text-[var(--node-text-color)] focus:outline-none focus:border-[var(--color-blue)] text-center"
                     autoFocus
                   />
                 </div>
 
                 {error && (
-                  <div className="p-3 bg-red-100 border border-red-200 text-red-600 rounded text-[12px]" style={{ marginTop: '16px' }}>
+                  <div className="p-3 bg-red-100 border border-red-200 text-red-600 rounded text-[12px]" style={{ marginTop: '16px', width: '320px' }}>
                     {error}
                   </div>
                 )}
 
-                <div className="flex justify-end" style={{ marginTop: '24px', gap: '24px' }}>
+                <div className="flex justify-center" style={{ marginTop: '24px', gap: '12px' }}>
                   <button
                     onClick={() => setShowNewProjectModal(false)}
-                    className="px-4 py-2 rounded text-[var(--node-text-color)] text-[13px] font-medium hover:bg-[var(--item-bg-color)] transition-colors"
+                    className="px-5 py-2 rounded text-[var(--node-text-color)] text-[13px] font-medium hover:bg-[var(--item-bg-color)] transition-colors border border-[var(--input-border-color)]"
                   >
                     Cancel
                   </button>

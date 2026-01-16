@@ -89,11 +89,11 @@ API_SCHEMAS = {
         }
     },
     "openai_chat": {
-        "name": "OpenAI Responses API",
-        "url": "https://api.openai.com/v1/responses",
+        "name": "OpenAI Chat API",
+        "url": "https://api.openai.com/v1/chat/completions",
         "method": "POST",
-        "doc_url": "https://platform.openai.com/docs/api-reference/responses",
-        "description": "Generate text responses using GPT models",
+        "doc_url": "https://platform.openai.com/docs/api-reference/chat",
+        "description": "Chat with GPT models (supports vision with gpt-4-vision-preview)",
         "category": "ai",
         "auth_type": "api_key",
         "rate_limit": "500/min",
@@ -110,37 +110,46 @@ API_SCHEMAS = {
             "body": {
                 "model": {
                     "type": "string",
-                    "default": "gpt-4",
+                    "default": "gpt-4o",
                     "required": True,
-                    "placeholder": "gpt-4",
-                    "description": "The model to use for generation"
+                    "placeholder": "gpt-4o",
+                    "description": "The model to use for generation",
+                    "options": [
+                        "gpt-4o",
+                        "gpt-4o-mini",
+                        "gpt-4-turbo",
+                        "gpt-4",
+                        "gpt-3.5-turbo",
+                        "gpt-4-vision-preview"
+                    ]
                 },
-                "input": {
-                    "type": "string",
-                    "default": "Tell me a three sentence bedtime story about a unicorn.",
+                "messages": {
+                    "type": "json",
+                    "default": [{"role": "user", "content": "Hello! Tell me a story about AI."}],
                     "required": True,
-                    "placeholder": "Enter your prompt...",
-                    "description": "The prompt to send to the model",
-                    "validation": {
-                        "min_length": 1,
-                        "max_length": 10000
-                    }
+                    "placeholder": '[{"role": "user", "content": "Your message"}]',
+                    "description": "Array of message objects. For images, use: {\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"What\'s in this image?\"}, {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,...\"}}]}"
                 },
-                "temperature": {"type": "number", "default": 1.0, "hidden": True, "description": "Sampling temperature (0-2)"},
-                "top_p": {"type": "number", "default": 1.0, "hidden": True, "description": "Nucleus sampling parameter"},
-                "max_output_tokens": {"type": "number", "default": None, "hidden": True, "description": "Maximum tokens to generate"},
-                "store": {"type": "boolean", "default": True, "hidden": True},
-                "metadata": {"type": "json", "default": {}, "hidden": True}
+                "temperature": {
+                    "type": "number",
+                    "default": 1.0,
+                    "hidden": True,
+                    "placeholder": "1.0",
+                    "description": "Sampling temperature (0-2)"
+                },
+                "max_tokens": {
+                    "type": "number",
+                    "default": 1000,
+                    "hidden": True,
+                    "placeholder": "1000",
+                    "description": "Maximum tokens to generate"
+                }
             }
         },
         "outputs": {
-            "message_text": {"type": "string", "path": "output.0.content.0.text"},
-            "output_full": {"type": "json", "path": "output"},
-            "usage": {"type": "json"},
-            "id": {"type": "string", "hidden": True},
-            "status": {"type": "string", "hidden": True},
-            "model": {"type": "string", "hidden": True},
-            "created_at": {"type": "number", "hidden": True}
+            "message_text": {"type": "string", "path": "choices.0.message.content", "description": "AI response text"},
+            "usage": {"type": "json", "path": "usage", "description": "Token usage stats"},
+            "response": {"type": "json", "description": "Full API response"}
         }
     },
     "google_maps_geocode": {
@@ -359,7 +368,13 @@ API_SCHEMAS = {
                     "default": "gemini-pro",
                     "required": True,
                     "placeholder": "gemini-pro",
-                    "description": "Gemini model version"
+                    "description": "Gemini model version",
+                    "options": [
+                        "gemini-pro",
+                        "gemini-pro-vision",
+                        "gemini-1.5-pro",
+                        "gemini-1.5-flash"
+                    ]
                 }
             },
             "params": {
@@ -418,7 +433,14 @@ API_SCHEMAS = {
                     "default": "claude-3-5-sonnet-20241022",
                     "required": True,
                     "placeholder": "claude-3-5-sonnet-20241022",
-                    "description": "Claude model version"
+                    "description": "Claude model version",
+                    "options": [
+                        "claude-3-5-sonnet-20241022",
+                        "claude-3-5-haiku-20241022",
+                        "claude-3-opus-20240229",
+                        "claude-3-sonnet-20240229",
+                        "claude-3-haiku-20240307"
+                    ]
                 },
                 "max_tokens": {
                     "type": "number",
@@ -500,7 +522,13 @@ API_SCHEMAS = {
                     "default": "stable-diffusion-xl-1024-v1-0",
                     "required": True,
                     "placeholder": "stable-diffusion-xl-1024-v1-0",
-                    "description": "Stability AI engine/model ID"
+                    "description": "Stability AI engine/model ID",
+                    "options": [
+                        "stable-diffusion-xl-1024-v1-0",
+                        "stable-diffusion-v1-6",
+                        "stable-diffusion-512-v2-1",
+                        "stable-diffusion-xl-beta-v2-2-2"
+                    ]
                 }
             },
             "headers": {
@@ -600,7 +628,13 @@ API_SCHEMAS = {
                     "type": "string",
                     "default": "eleven_monolingual_v1",
                     "placeholder": "eleven_monolingual_v1",
-                    "description": "TTS model to use"
+                    "description": "TTS model to use",
+                    "options": [
+                        "eleven_monolingual_v1",
+                        "eleven_multilingual_v1",
+                        "eleven_multilingual_v2",
+                        "eleven_turbo_v2"
+                    ]
                 },
                 "voice_settings": {
                     "type": "json",

@@ -231,6 +231,21 @@ const CustomNode = ({ data }) => {
               style={{ width: 'auto', margin: '0 5px' }}
               title={description}
             />
+          ) : port.options && Array.isArray(port.options) ? (
+            <select
+              className={`nodrag ${isRequired && !port.value ? 'required-field' : ''}`}
+              value={port.value ?? ''}
+              onChange={(e) => updateInputValue(data.id, port.key, e.target.value)}
+              title={description}
+              aria-label={port.key}
+              aria-required={isRequired}
+            >
+              {port.options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           ) : (
             <input
               type="text"

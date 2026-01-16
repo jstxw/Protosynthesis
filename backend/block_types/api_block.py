@@ -135,7 +135,8 @@ class APIBlock(Block):
                     required=meta.get("required", False),
                     placeholder=meta.get("placeholder"),
                     description=meta.get("description"),
-                    validation=meta.get("validation")
+                    validation=meta.get("validation"),
+                    options=meta.get("options")
                 )
         else:
             # Handling for structured schemas
@@ -150,7 +151,8 @@ class APIBlock(Block):
                         required=meta.get("required", False),
                         placeholder=meta.get("placeholder"),
                         description=meta.get("description"),
-                        validation=meta.get("validation")
+                        validation=meta.get("validation"),
+                        options=meta.get("options")
                     )
 
         # Register new outputs from the schema
@@ -248,7 +250,7 @@ class APIBlock(Block):
                 "url": url,
                 "params": params,
                 "headers": headers,
-                "timeout": 10
+                "timeout": 30
             }
 
             if self.method.upper() in ["POST", "PUT", "PATCH"]:

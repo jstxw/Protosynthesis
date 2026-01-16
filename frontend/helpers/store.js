@@ -99,12 +99,15 @@ const initializeBlockData = (type, params = {}) => {
             return {
                 ...baseBlock,
                 template: params.template || '',
-                inputs: {},
-                outputs: { result: null },
-                input_meta: {},
-                output_meta: { result: { type: 'string', label: 'Result' } },
-                visible_inputs: [],
-                visible_outputs: ['result'],
+                inputs: { message_text: null },
+                outputs: { result: null, result_json: null },
+                input_meta: { message_text: { type: 'string', label: 'Message Text' } },
+                output_meta: {
+                    result: { type: 'string', label: 'Result' },
+                    result_json: { type: 'json', label: 'Result JSON' }
+                },
+                visible_inputs: ['message_text'],
+                visible_outputs: ['result', 'result_json'],
             };
         case 'WAIT':
             return {
@@ -132,12 +135,13 @@ const initializeBlockData = (type, params = {}) => {
             return {
                 ...baseBlock,
                 selected_key: params.selected_key || '',
+                available_keys: params.available_keys || [],
                 inputs: {},
-                outputs: { api_key: null },
+                outputs: { key: null },
                 input_meta: {},
-                output_meta: { api_key: { type: 'string', label: 'API Key' } },
+                output_meta: { key: { type: 'string', label: 'API Key' } },
                 visible_inputs: [],
-                visible_outputs: ['api_key'],
+                visible_outputs: ['key'],
             };
         default:
             return baseBlock;
@@ -332,6 +336,40 @@ export const useStore = create((set, get) => ({
                         response: error?.response,
                         stack: error?.stack
                     });
+                    // Fall through to default handling on error
+                }
+            }
+
+            // Special handling for API_KEY blocks to fetch available keys
+            if (type === 'API_KEY') {
+                try {
+                    // Fetch available API keys from backend
+                    const response = await apiClient.get('/v2/available-api-keys');
+                    const availableKeys = response.data.available_keys || [];
+
+                    // Update the block data with available keys
+                    const updatedNode = {
+                        ...flowNode,
+                        data: {
+                            ...flowNode.data,
+                            available_keys: availableKeys,
+                            inputs: normalizePortsToArray(flowNode.data.inputs, flowNode.data.input_meta),
+                            outputs: normalizePortsToArray(flowNode.data.outputs, flowNode.data.output_meta)
+                        }
+                    };
+
+                    console.log("Adding API_KEY block with available keys:", updatedNode);
+                    set(state => ({nodes: [...state.nodes, updatedNode]}));
+                    get().selectNode(updatedNode.id);
+
+                    // Auto-save if in V2 mode
+                    if (currentProjectId && currentWorkflowId) {
+                        get().scheduleAutoSave();
+                    }
+
+                    return; // Exit early
+                } catch (error) {
+                    console.error('Failed to fetch available API keys:', error);
                     // Fall through to default handling on error
                 }
             }
@@ -683,7 +721,7 @@ export const useStore = create((set, get) => ({
 
     // --- VALIDATION ---
     validateWorkflow: () => {
-        const { nodes, apiSchemas } = get();
+        const { nodes, edges, apiSchemas } = get();
         const errors = [];
 
         nodes.forEach(node => {
@@ -708,6 +746,14 @@ export const useStore = create((set, get) => ({
                         const inputs = nodeData.inputs || [];
                         const inputPort = inputs.find(p => p.key === fieldKey);
                         const value = inputPort?.value;
+
+                        // Check if this input has an incoming connection
+                        const hasConnection = edges.some(edge =>
+                            edge.target === node.id && edge.targetHandle === fieldKey
+                        );
+
+                        // Skip validation if connected (value will come from upstream node)
+                        if (hasConnection) return;
 
                         if (!value || (typeof value === 'string' && value.trim() === '')) {
                             errors.push({
@@ -857,7 +903,6 @@ export const useStore = create((set, get) => ({
     },
 
     // --- EXECUTION ---
-    // Legacy executeGraph removed - use executeWorkflowV2 instead
     executeGraph: async () => {
         // Validate before execution
         const validationErrors = get().validateWorkflow();
@@ -869,8 +914,134 @@ export const useStore = create((set, get) => ({
             return;
         }
 
-        console.warn('executeGraph (legacy) is deprecated. Use executeWorkflowV2 instead.');
-        alert('Please use the Execute button with a project/workflow ID loaded.');
+        const { nodes, edges, currentProjectId, currentWorkflowId } = get();
+
+        // Check if we're in V2 mode (have project/workflow loaded)
+        if (currentProjectId && currentWorkflowId) {
+            // V2 execution: save first, then execute using stored workflow
+            await get().saveWorkflowToV2();
+            await get().executeWorkflowV2();
+        } else {
+            // Legacy execution: use old /api/execute endpoint
+            await get().executeGraphLegacy();
+        }
+    },
+
+    executeWorkflowV2: async () => {
+        const { currentProjectId, currentWorkflowId, nodes, edges } = get();
+
+        if (!currentProjectId || !currentWorkflowId) {
+            alert('Please open a workflow from the dashboard first.');
+            return;
+        }
+
+        set({ isExecuting: true, executionLogs: ["🚀 Starting workflow execution..."], activeBlockId: null, executionResult: null });
+
+        try {
+            const response = await fetch(`http://localhost:5001/api/execute`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    nodes: nodes,
+                    edges: edges
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Execution failed: ${response.statusText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const jsonData = line.slice(6);
+                        try {
+                            const event = JSON.parse(jsonData);
+
+                            if (event.type === 'start') {
+                                set(state => ({
+                                    activeBlockId: event.block_id,
+                                    executionLogs: [...state.executionLogs, `▶ Starting: ${event.block_type}`]
+                                }));
+                            } else if (event.type === 'progress') {
+                                // Update node outputs in the graph
+                                set(state => {
+                                    const logs = [...state.executionLogs, `✓ Completed: ${event.name}`];
+
+                                    // Add response_json to logs if it exists
+                                    if (event.outputs && event.outputs.response_json) {
+                                        const responseStr = typeof event.outputs.response_json === 'object'
+                                            ? JSON.stringify(event.outputs.response_json, null, 2)
+                                            : event.outputs.response_json;
+                                        logs.push(`📊 Response: ${responseStr}`);
+                                    }
+
+                                    // Add message_text to logs if it exists (for AI responses)
+                                    if (event.outputs && event.outputs.message_text) {
+                                        logs.push(`💬 AI Response: ${event.outputs.message_text}`);
+                                    }
+
+                                    return {
+                                        nodes: state.nodes.map(n => {
+                                            if (n.id === event.block_id) {
+                                                // Update outputs with execution results
+                                                const updatedOutputs = n.data.outputs.map(output => ({
+                                                    ...output,
+                                                    value: event.outputs[output.key]
+                                                }));
+                                                return {
+                                                    ...n,
+                                                    data: {
+                                                        ...n.data,
+                                                        outputs: updatedOutputs
+                                                    }
+                                                };
+                                            }
+                                            return n;
+                                        }),
+                                        executionLogs: logs,
+                                        activeBlockId: null
+                                    };
+                                });
+                            } else if (event.type === 'complete') {
+                                set(state => ({
+                                    executionLogs: [...state.executionLogs, `✅ Workflow execution completed!`],
+                                    isExecuting: false,
+                                    activeBlockId: null
+                                }));
+                            } else if (event.type === 'error') {
+                                set(state => ({
+                                    executionLogs: [...state.executionLogs, `❌ Error in ${event.name}: ${event.error}`],
+                                    activeBlockId: null,
+                                    isExecuting: false
+                                }));
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse event:', e);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Execution error:', error);
+            set(state => ({
+                executionLogs: [...state.executionLogs, `❌ Execution failed: ${error.message}`]
+            }));
+        } finally {
+            set({ isExecuting: false, activeBlockId: null });
+        }
     },
 
     executeGraphLegacy: async () => {
