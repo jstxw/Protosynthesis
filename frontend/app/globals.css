@@ -1627,3 +1627,13 @@ textarea::placeholder {
 .page-transition-exit {
     animation: pageTransitionFadeOut 0.3s ease-in-out;
 }
+
+/* Loading Screen Pulse Animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}

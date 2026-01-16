@@ -13,7 +13,7 @@ export default function Template({ children }) {
     <div
       style={{
         opacity: isVisible ? 1 : 0,
-        transition: 'opacity 0.3s ease-in-out'
+        transition: 'opacity 0.6s ease-in-out'
       }}
     >
       {children}

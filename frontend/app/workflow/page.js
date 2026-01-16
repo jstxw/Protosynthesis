@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ReactFlowProvider } from 'reactflow';
@@ -28,11 +28,31 @@ export default function WorkflowPage() {
   const activeBlockId = useStore((state) => state.activeBlockId);
   const selectedNodeId = useStore((state) => state.selectedNodeId || state.activeBlockId);
 
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+
   const projectId = searchParams.get('project');
   const workflowId = searchParams.get('workflow');
 
   // Get node types for AI context
   const currentNodeTypes = nodes.map(node => node.data?.type || node.type).filter(Boolean);
+
+  // Loading screen timer - triggers on mount and when workflow changes
+  useEffect(() => {
+    // Reset loading screen when workflow changes
+    setShowLoadingScreen(true);
+    setFadeOut(false);
+
+    const timer = setTimeout(() => {
+      setFadeOut(true);
+      // Remove loading screen after fade out animation completes
+      setTimeout(() => {
+        setShowLoadingScreen(false);
+      }, 500); // Match the CSS transition duration
+    }, 2000); // Show for 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [projectId, workflowId]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -87,6 +107,45 @@ export default function WorkflowPage() {
 
         {/* Floating chat button */}
         <ChatButton />
+
+        {/* Loading Screen Overlay */}
+        {showLoadingScreen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'var(--background-color)',
+              backgroundImage: `
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px)
+              `,
+              backgroundSize: '25px 25px, 25px 25px, 100px 100px, 100px 100px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99999,
+              opacity: fadeOut ? 0 : 1,
+              transition: 'opacity 0.5s ease-in-out',
+              pointerEvents: fadeOut ? 'none' : 'auto',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '2rem',
+                fontWeight: 'bold',
+                color: 'var(--text-color)',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            >
+              Loading...
+            </div>
+          </div>
+        )}
       </div>
     </ReactFlowProvider>
   );
