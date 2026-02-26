@@ -1,4 +1,4 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import axios from 'axios';
 import {
     applyNodeChanges,
@@ -124,11 +124,15 @@ const initializeBlockData = (type, params = {}) => {
             return {
                 ...baseBlock,
                 message: params.message || '',
-                inputs: {},
+                inputs: { trigger: null, message: '' },
                 outputs: { response: null },
-                input_meta: {},
+                input_meta: {
+                    trigger: { type: 'any', label: 'Trigger' },
+                    message: { type: 'string', label: 'Message' }
+                },
                 output_meta: { response: { type: 'string', label: 'Response' } },
-                visible_inputs: [],
+                hidden_inputs: ['trigger'],
+                visible_inputs: ['trigger', 'message'],
                 visible_outputs: ['response'],
             };
         case 'API_KEY':
@@ -136,11 +140,11 @@ const initializeBlockData = (type, params = {}) => {
                 ...baseBlock,
                 selected_key: params.selected_key || '',
                 available_keys: params.available_keys || [],
-                inputs: {},
+                inputs: { trigger: null },
                 outputs: { key: null },
-                input_meta: {},
+                input_meta: { trigger: { type: 'any', label: 'Trigger' } },
                 output_meta: { key: { type: 'string', label: 'API Key' } },
-                visible_inputs: [],
+                visible_inputs: ['trigger'],
                 visible_outputs: ['key'],
             };
         default:
@@ -181,6 +185,7 @@ export const useStore = create((set, get) => ({
     sidebarCollapsed: false,
     reactIDEOpen: false,
     chatPanelOpen: false,
+    dialoguePrompt: null, // { blockId, message } when a Dialogue block awaits input
 
     // --- THEME & EDITOR ---
     editorTheme: {
@@ -204,7 +209,7 @@ export const useStore = create((set, get) => ({
     fetchApiSchemas: async () => {
         try {
             const response = await axios.get(`${API_URL}/schemas`);
-            set({apiSchemas: response.data});
+            set({ apiSchemas: response.data });
         } catch (error) {
             console.error("Failed to fetch API schemas:", error);
         }
@@ -243,7 +248,7 @@ export const useStore = create((set, get) => ({
 
     onConnect: async (connection) => {
         const tempEdgeId = `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`;
-        const optimisticEdge = {...connection, id: tempEdgeId, type: 'default'};
+        const optimisticEdge = { ...connection, id: tempEdgeId, type: 'default' };
 
         set(state => {
             // Ensure inputs only have one connection by removing any existing edge to the target handle
@@ -319,7 +324,7 @@ export const useStore = create((set, get) => ({
                     };
 
                     console.log("Adding API block with schema:", normalizedNode);
-                    set(state => ({nodes: [...state.nodes, normalizedNode]}));
+                    set(state => ({ nodes: [...state.nodes, normalizedNode] }));
                     get().selectNode(normalizedNode.id);
 
                     // Auto-save if in V2 mode
@@ -359,7 +364,7 @@ export const useStore = create((set, get) => ({
                     };
 
                     console.log("Adding API_KEY block with available keys:", updatedNode);
-                    set(state => ({nodes: [...state.nodes, updatedNode]}));
+                    set(state => ({ nodes: [...state.nodes, updatedNode] }));
                     get().selectNode(updatedNode.id);
 
                     // Auto-save if in V2 mode
@@ -385,7 +390,7 @@ export const useStore = create((set, get) => ({
             };
 
             console.log("Adding block locally:", normalizedNode);
-            set(state => ({nodes: [...state.nodes, normalizedNode]}));
+            set(state => ({ nodes: [...state.nodes, normalizedNode] }));
             get().selectNode(normalizedNode.id);
 
             // Auto-save if in V2 mode
@@ -496,9 +501,9 @@ export const useStore = create((set, get) => ({
                             input.key === inputKey ? { ...input, value } : input
                         );
                     } else {
-                        newInputs = {...(node.data.inputs || {}), [inputKey]: value};
+                        newInputs = { ...(node.data.inputs || {}), [inputKey]: value };
                     }
-                    return {...node, data: {...node.data, inputs: newInputs}};
+                    return { ...node, data: { ...node.data, inputs: newInputs } };
                 }
                 return node;
             })
@@ -524,7 +529,7 @@ export const useStore = create((set, get) => ({
                             output.key === outputKey ? { ...output, value } : output
                         );
                     } else {
-                        newOutputs = {...(node.data.outputs || {}), [outputKey]: value};
+                        newOutputs = { ...(node.data.outputs || {}), [outputKey]: value };
                     }
                     return { ...node, data: { ...node.data, outputs: newOutputs } };
                 }
@@ -560,7 +565,7 @@ export const useStore = create((set, get) => ({
             const newMenuState = !node.data.menu_open;
             set(state => ({
                 nodes: state.nodes.map(n =>
-                    n.id === nodeId ? {...n, data: {...n.data, menu_open: newMenuState}} : n
+                    n.id === nodeId ? { ...n, data: { ...n.data, menu_open: newMenuState } } : n
                 )
             }));
             // Auto-save in V2 mode (menu state persisted)
@@ -623,7 +628,7 @@ export const useStore = create((set, get) => ({
 
             // Avoid re-render if edges haven't changed class
             const hasChanged = state.edges.length !== newEdges.length ||
-                               newEdges.some((edge, i) => edge.className !== state.edges[i].className);
+                newEdges.some((edge, i) => edge.className !== state.edges[i].className);
 
             if (!hasChanged) return {};
 
@@ -707,7 +712,7 @@ export const useStore = create((set, get) => ({
                     const newHidden = isHidden
                         ? currentHidden.filter(k => k !== key)
                         : [...currentHidden, key];
-                    return {...n, data: {...n.data, [hiddenSet]: newHidden}};
+                    return { ...n, data: { ...n.data, [hiddenSet]: newHidden } };
                 }
                 return n;
             })
@@ -1021,6 +1026,14 @@ export const useStore = create((set, get) => ({
                                     isExecuting: false,
                                     activeBlockId: null
                                 }));
+                            } else if (event.type === 'waiting_for_input') {
+                                set({
+                                    dialoguePrompt: {
+                                        blockId: event.block_id,
+                                        message: event.message || ''
+                                    },
+                                    executionLogs: [...get().executionLogs, `💬 Waiting for user input: ${event.message || '(no message)'}`]
+                                });
                             } else if (event.type === 'error') {
                                 set(state => ({
                                     executionLogs: [...state.executionLogs, `❌ Error in ${event.name}: ${event.error}`],
@@ -1426,6 +1439,30 @@ export const useStore = create((set, get) => ({
         if (currentProjectId && currentWorkflowId) {
             get().scheduleAutoSave();
         }
+    },
+
+    submitDialogueResponse: async (blockId, value) => {
+        try {
+            await axios.post(`${API_URL}/execution/respond`, {
+                block_id: blockId,
+                value: value
+            });
+            // Update the node output locally for immediate feedback
+            get().updateOutputValue(blockId, 'response', value);
+            set(state => ({
+                dialoguePrompt: null,
+                executionLogs: [...state.executionLogs, `✅ User responded: "${value}"`]
+            }));
+        } catch (error) {
+            console.error('Failed to submit dialogue response:', error);
+            set(state => ({
+                executionLogs: [...state.executionLogs, `❌ Failed to submit response: ${error.message}`]
+            }));
+        }
+    },
+
+    dismissDialogue: () => {
+        set({ dialoguePrompt: null });
     },
 
     toggleSidebar: () => {

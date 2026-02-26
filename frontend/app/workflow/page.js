@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import ExecutionLog from '@/components/ExecutionLog';
 import AIAssistantPanel from '@/components/Assistant/AIAssistantPanel';
 import ReactIDE from '@/components/ReactIDE'; // Import new ReactIDE
+import DialogueModal from '@/components/DialogueModal';
 import ChatButton from '@/components/ChatButton';
 import { useStore } from '@/helpers/store';
 
@@ -94,6 +95,9 @@ export default function WorkflowPage() {
 
         {/* React IDE as popup/modal */}
         <ReactIDE />
+
+        {/* Dialogue input modal - shown during execution when a Dialogue block waits */}
+        <DialogueModal />
 
         {/* AI Assistant positioned at bottom-right */}
         <AIAssistantPanel

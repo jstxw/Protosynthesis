@@ -1,15 +1,23 @@
 :root {
-    --background-color: #3f464e; /* Poorly wiped chalkboard grey */
-    --surface-color: #D7CCC8; /* Lighter wood color */
-    --node-bg-color: #fffdf5; /* Paper note color */
+    --background-color: #3f464e;
+    /* Poorly wiped chalkboard grey */
+    --surface-color: #D7CCC8;
+    /* Lighter wood color */
+    --node-bg-color: #fffdf5;
+    /* Paper note color */
     --node-text-color: #212121;
-    --border-color: #a1887f; /* Darker border for contrast */
-    --text-color: #efebe9; /* Off-white text for wood/chalkboard */
-    --text-muted-color: #5d4037; /* Darker muted text */
+    --border-color: #a1887f;
+    /* Darker border for contrast */
+    --text-color: #efebe9;
+    /* Off-white text for wood/chalkboard */
+    --text-muted-color: #5d4037;
+    /* Darker muted text */
     --primary-color: #ffffff;
     --handle-color: #1a1a1a;
-    --hover-color: #ffffff; /* White hover */
-    --item-bg-color: #efebe9; /* Lighter background for items on panels */
+    --hover-color: #ffffff;
+    /* White hover */
+    --item-bg-color: #efebe9;
+    /* Lighter background for items on panels */
     --danger-color: #ef5350;
     --color-green: #c5e1a5;
     --color-red: #f48fb1;
@@ -17,15 +25,21 @@
     --color-orange: #ffe082;
     --color-purple: #ce93d8;
     --button-hover-green: #aed581;
-    --input-bg-color: #f5f5f5; /* Inputs on paper nodes */
+    --input-bg-color: #f5f5f5;
+    /* Inputs on paper nodes */
     --input-border-color: #e0e0e0;
-    --panel-text-color: #000000; /* Black text for light panel */
-    --panel-text-muted-color: #5d4037; /* Dark muted text for light panel */
-    --item-text-muted-color: #795548; /* Muted dark text for light items */
+    --panel-text-color: #000000;
+    /* Black text for light panel */
+    --panel-text-muted-color: #5d4037;
+    /* Dark muted text for light panel */
+    --item-text-muted-color: #795548;
+    /* Muted dark text for light items */
 }
 
 /* Basic Reset & App Layout */
-html, body, #__next {
+html,
+body,
+#__next {
     padding: 0;
     margin: 0;
     height: 100%;
@@ -44,7 +58,10 @@ a {
 }
 
 /* Ensure inputs inherit the font (Nunito) */
-input, textarea, select, button {
+input,
+textarea,
+select,
+button {
     font-family: inherit;
 }
 
@@ -65,8 +82,10 @@ textarea::placeholder {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    position: relative; /* For child positioning */
-    min-width: 0; /* Prevent flexbox overflow */
+    position: relative;
+    /* For child positioning */
+    min-width: 0;
+    /* Prevent flexbox overflow */
 }
 
 .flow-container {
@@ -114,13 +133,14 @@ textarea::placeholder {
     padding: 10px 5px;
 }
 
-.control-panel.collapsed > * {
+.control-panel.collapsed>* {
     opacity: 0;
     pointer-events: none;
 }
 
 .controls-section {
-    margin-bottom: 15px; /* Increased separation between sections */
+    margin-bottom: 15px;
+    /* Increased separation between sections */
     display: flex;
     flex-direction: column;
 }
@@ -160,12 +180,14 @@ textarea::placeholder {
 }
 
 .controls-section h4 {
-    margin: 0 0 8px 0; /* Slightly more space under headers */
+    margin: 0 0 8px 0;
+    /* Slightly more space under headers */
     font-size: 14px;
     font-weight: bold;
     text-transform: uppercase;
     color: var(--panel-text-muted-color);
-    border-bottom: 1px solid var(--border-color); /* Added line under headers */
+    border-bottom: 1px solid var(--border-color);
+    /* Added line under headers */
     padding-bottom: 5px;
 }
 
@@ -237,6 +259,7 @@ textarea::placeholder {
         opacity: 0;
         transform: scale(0.8);
     }
+
     to {
         opacity: 1;
         transform: scale(1);
@@ -262,9 +285,11 @@ textarea::placeholder {
         stroke-dashoffset: 24;
         stroke: rgba(255, 255, 255, 0.8);
     }
+
     50% {
         stroke: rgba(255, 255, 255, 1);
     }
+
     100% {
         stroke-dashoffset: 0;
         stroke: rgba(255, 255, 255, 0.8);
@@ -272,9 +297,12 @@ textarea::placeholder {
 }
 
 @keyframes bounce {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-20px);
     }
@@ -678,6 +706,7 @@ textarea::placeholder {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -700,14 +729,17 @@ textarea::placeholder {
         opacity: 0;
         transform: scale(0.8);
     }
+
     10% {
         opacity: 1;
         transform: scale(1.2);
     }
+
     90% {
         opacity: 1;
         transform: scale(1);
     }
+
     100% {
         opacity: 0;
         transform: scale(0.8);
@@ -718,7 +750,8 @@ textarea::placeholder {
 .block-list {
     display: flex;
     flex-direction: column;
-    gap: 4px; /* Matches dashboard gap */
+    gap: 4px;
+    /* Matches dashboard gap */
     width: 100%;
 }
 
@@ -729,9 +762,11 @@ textarea::placeholder {
     gap: 10px;
     width: 100%;
     padding: 6px 10px;
-    margin-bottom: 0; /* Removed margin-bottom in favor of gap */
+    margin-bottom: 0;
+    /* Removed margin-bottom in favor of gap */
     background: var(--item-bg-color);
-    border: 1px solid transparent; /* Align with border box model */
+    border: 1px solid transparent;
+    /* Align with border box model */
     border-radius: 4px;
     cursor: pointer;
     text-align: left;
@@ -941,7 +976,8 @@ textarea::placeholder {
 }
 
 .logic-grid .block-list-item-desc {
-    display: none; /* Remove subtitles on logic blocks */
+    display: none;
+    /* Remove subtitles on logic blocks */
 }
 
 /* Search Input Styles */
@@ -961,7 +997,8 @@ textarea::placeholder {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding-right: 5px; /* For scrollbar spacing */
+    padding-right: 5px;
+    /* For scrollbar spacing */
 }
 
 /* Custom Scrollbar for API List */
@@ -988,7 +1025,8 @@ textarea::placeholder {
     gap: 5px;
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color); /* Added line under buttons area */
+    border-bottom: 1px solid var(--border-color);
+    /* Added line under buttons area */
 }
 
 .panel-header-buttons button {
@@ -1086,6 +1124,7 @@ textarea::placeholder {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -1148,13 +1187,15 @@ textarea::placeholder {
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--background-color); /* Matches theme */
+    background-color: var(--background-color);
+    /* Matches theme */
     border: 1px solid var(--border-color);
     color: var(--text-color);
     padding: 8px;
     border-radius: 4px;
     white-space: pre-wrap;
-    z-index: 9999; /* Higher than panels */
+    z-index: 9999;
+    /* Higher than panels */
     width: max-content;
     min-width: 150px;
     max-width: 300px;
@@ -1165,11 +1206,13 @@ textarea::placeholder {
     transition: opacity 0.2s, visibility 0.2s;
     pointer-events: none;
     text-align: left;
-    word-break: break-all; /* Break long words */
+    word-break: break-all;
+    /* Break long words */
 }
 
 .port-value-display:hover {
-    overflow: visible; /* Allow it to be seen if we wanted, but tooltip handles it better */
+    overflow: visible;
+    /* Allow it to be seen if we wanted, but tooltip handles it better */
 }
 
 .port-value-display:hover .port-value-tooltip {
@@ -1305,7 +1348,8 @@ textarea::placeholder {
 .preview-wrapper {
     flex-grow: 1;
     padding: 10px;
-    background: #fff; /* White background for preview */
+    background: #fff;
+    /* White background for preview */
     overflow: hidden;
     position: relative;
 }
@@ -1372,86 +1416,86 @@ textarea::placeholder {
 
 /* AI Assistant Chat */
 .ai-assistant-container {
-  background-color: var(--surface-color);
-  padding: 5px 10px;
-  display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    padding: 5px 10px;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .ai-chat-display {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-right: 5px;
-  max-height: 100px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 5px;
+    max-height: 100px;
 }
 
 .chat-message {
-  max-width: 85%;
-  padding: 6px 10px;
-  border-radius: 12px;
-  line-height: 1.4;
-  word-wrap: break-word;
-  font-size: 0.9em;
+    max-width: 85%;
+    padding: 6px 10px;
+    border-radius: 12px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    font-size: 0.9em;
 }
 
 .chat-message.ai {
-  background-color: var(--surface-light-color);
-  align-self: flex-start;
-  border-bottom-left-radius: 2px;
+    background-color: var(--surface-light-color);
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
 }
 
 .chat-message.user {
-  background-color: #5865f2;
-  color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: 2px;
+    background-color: #5865f2;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
 }
 
 .chat-message p {
-  margin: 0;
+    margin: 0;
 }
 
 .ai-chat-input-area {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  align-items: center;
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
 }
 
 .ai-chat-input-area input {
-  flex-grow: 1;
-  background-color: var(--input-bg-color);
-  border: 1px solid var(--input-border-color);
-  color: var(--text-color);
-  padding: 6px 10px;
-  border-radius: 5px;
-  outline: none;
-  transition: border-color 0.2s;
+    flex-grow: 1;
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--input-border-color);
+    color: var(--text-color);
+    padding: 6px 10px;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.2s;
 }
 
 .ai-chat-input-area input:focus {
-  border-color: #5865f2;
+    border-color: #5865f2;
 }
 
 .ai-chat-input-area button {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 5px;
-  background-color: #5865f2;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: filter 0.2s;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    background-color: #5865f2;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter 0.2s;
 }
 
 .ai-chat-input-area button:hover {
-  filter: brightness(90%);
+    filter: brightness(90%);
 }
 
 /* Hover Outline Effect */
@@ -1485,10 +1529,13 @@ textarea::placeholder {
 }
 
 @keyframes activeBlockPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 30px rgba(74, 222, 128, 0.6), inset 0 0 20px rgba(74, 222, 128, 0.2);
         border-color: #4ade80;
     }
+
     50% {
         box-shadow: 0 0 50px rgba(74, 222, 128, 0.9), inset 0 0 30px rgba(74, 222, 128, 0.4);
         border-color: #22c55e;
@@ -1526,7 +1573,8 @@ textarea::placeholder {
 /* Node Icon Nub */
 .node-icon-nub {
     position: absolute;
-    top: -20px; /* Moved up slightly to stick out more clearly */
+    top: -20px;
+    /* Moved up slightly to stick out more clearly */
     left: 50%;
     transform: translateX(-50%);
     width: 50px;
@@ -1536,7 +1584,8 @@ textarea::placeholder {
     justify-content: center;
     align-items: center;
     border-bottom: none;
-    z-index: 1; /* Ensure it sits behind the node header */
+    z-index: 1;
+    /* Ensure it sits behind the node header */
 }
 
 /* Icon Nub Colors for Non-Category Blocks */
@@ -1595,9 +1644,11 @@ textarea::placeholder {
 }
 
 .node-nub-icon {
-    margin-top: 0; /* Center the icon visually in the protruding part */
+    margin-top: 0;
+    /* Center the icon visually in the protruding part */
     opacity: 0.9;
-    filter: brightness(0.2); /* Make icon darker for contrast */
+    filter: brightness(0.2);
+    /* Make icon darker for contrast */
     font-size: 20px;
 }
 
@@ -1606,6 +1657,7 @@ textarea::placeholder {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -1615,6 +1667,7 @@ textarea::placeholder {
     from {
         opacity: 1;
     }
+
     to {
         opacity: 0;
     }
@@ -1630,10 +1683,134 @@ textarea::placeholder {
 
 /* Loading Screen Pulse Animation */
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }
+}
+
+/* ===== DIALOGUE MODAL ===== */
+.dialogue-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.25s ease;
+}
+
+.dialogue-modal {
+    background: var(--surface-color, #1e1e2e);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(206, 147, 216, 0.15);
+    overflow: hidden;
+    animation: dialogueSlideIn 0.3s ease;
+}
+
+@keyframes dialogueSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.dialogue-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #ce93d8 0%, #ab47bc 100%);
+    color: #1a1a2e;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+}
+
+.dialogue-modal-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0);
+}
+
+.dialogue-modal-message {
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-color, #e0e0e0);
+    border-bottom: 1px solid var(--border-color, #333);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dialogue-modal-input-area {
+    padding: 16px 20px;
+}
+
+.dialogue-modal-input {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--input-bg-color, #2a2a3e);
+    border: 1px solid var(--input-border-color, #444);
+    border-radius: 10px;
+    color: #1a1a1a;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.dialogue-modal-input:focus {
+    border-color: #ce93d8;
+    box-shadow: 0 0 0 3px rgba(206, 147, 216, 0.2);
+}
+
+.dialogue-modal-input::placeholder {
+    color: var(--text-muted-color, #888);
+}
+
+.dialogue-modal-actions {
+    padding: 0 20px 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.dialogue-modal-submit {
+    padding: 10px 28px;
+    background: linear-gradient(135deg, #ce93d8 0%, #ab47bc 100%);
+    border: none;
+    border-radius: 10px;
+    color: #1a1a2e;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+}
+
+.dialogue-modal-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(206, 147, 216, 0.4);
+}
+
+.dialogue-modal-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }

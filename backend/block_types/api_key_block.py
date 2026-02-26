@@ -40,7 +40,8 @@ class ApiKeyBlock(Block):
             full_env_var_name = f"{ENV_KEY_PREFIX}{self.selected_key}"
             print(full_env_var_name)
 
-            self.outputs["key"] = os.getenv(full_env_var_name)
+            raw_value = os.getenv(full_env_var_name)
+            self.outputs["key"] = raw_value.strip() if raw_value else None
         else:
             self.outputs["key"] = None
 

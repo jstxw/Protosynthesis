@@ -219,6 +219,15 @@ class APIBlock(Block):
             
             headers = {key: self.inputs.get(key) for key in schema_inputs.get("headers", {}) if self.inputs.get(key) is not None}
 
+            # --- Special handling: auto-wrap user_message for OpenAI Chat ---
+            if self.schema_key == "openai_chat":
+                user_msg = body.pop("user_message", None)
+                if user_msg and isinstance(user_msg, str) and user_msg.strip():
+                    body["messages"] = [{"role": "user", "content": user_msg.strip()}]
+                elif "messages" in body and isinstance(body["messages"], str):
+                    # Also handle if messages itself is a plain string
+                    body["messages"] = [{"role": "user", "content": body["messages"]}]
+
             # --- Special handling for Twilio Basic Auth ---
             if self.schema_key == "twilio_send_sms":
                 account_sid = path_params.get("AccountSid")

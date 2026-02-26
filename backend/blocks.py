@@ -118,11 +118,16 @@ class Block(ABC):
         Retrieves data from connected source blocks and populates self.inputs.
         This should be called before execute().
         """
+        print(f"  📥 fetch_inputs for '{self.name}': {len(self.input_connectors)} connectors registered")
         for key, connector in self.input_connectors.items():
             if connector:
                 # Assume source block has already executed and outputs are ready
                 source_data = connector.source_block.outputs.get(connector.source_output_key)
-                self.inputs[key] = connector.transfer(source_data)
+                transferred = connector.transfer(source_data)
+                print(f"     {key} ← {connector.source_block.name}[{connector.source_block.id}].{connector.source_output_key} = {repr(transferred)[:100]}")
+                self.inputs[key] = transferred
+            else:
+                print(f"     {key}: no connector")
 
     @abstractmethod
     def execute(self):

@@ -108,6 +108,13 @@ API_SCHEMAS = {
                 }
             },
             "body": {
+                "user_message": {
+                    "type": "string",
+                    "default": "",
+                    "required": False,
+                    "placeholder": "Type your message here...",
+                    "description": "Plain text message — auto-wrapped into the messages array. Overrides 'messages' if set."
+                },
                 "model": {
                     "type": "string",
                     "default": "gpt-4o",
@@ -126,9 +133,10 @@ API_SCHEMAS = {
                 "messages": {
                     "type": "json",
                     "default": [{"role": "user", "content": "Hello! Tell me a story about AI."}],
-                    "required": True,
+                    "required": False,
+                    "hidden": True,
                     "placeholder": '[{"role": "user", "content": "Your message"}]',
-                    "description": "Array of message objects. For images, use: {\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"What\'s in this image?\"}, {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,...\"}}]}"
+                    "description": "Array of message objects. Used only if user_message is empty."
                 },
                 "temperature": {
                     "type": "number",

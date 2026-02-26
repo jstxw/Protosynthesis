@@ -22,6 +22,11 @@ from api_routes import api_v2
 from ai_routes import ai_bp
 import collections
 import json
+import threading
+
+# Module-level dict to track active dialogue blocks awaiting user input.
+# Maps block_id -> DialogueBlock instance. Thread-safe via GIL for simple dict ops.
+_active_dialogue_blocks = {}
 
 app = Flask(__name__)
 
@@ -200,10 +205,26 @@ def execute_graph(start_blocks: list[Block], all_blocks_map: dict[str, Block]):
         import time
         time.sleep(3)
 
+        # For DIALOGUE blocks, register and emit waiting event BEFORE execute (which blocks)
+        if current_block.block_type == "DIALOGUE":
+            _active_dialogue_blocks[current_block.id] = current_block
+            message_content = current_block.inputs.get("message", "")
+            if isinstance(message_content, dict) or isinstance(message_content, list):
+                message_content = json.dumps(message_content, indent=2)
+            yield json.dumps({
+                "type": "waiting_for_input",
+                "block_id": current_block.id,
+                "block_type": "DIALOGUE",
+                "message": message_content or ""
+            }) + "\n"
+
         # Execute the block
         try:
             print(f"Executing {current_block.name}...")
             current_block.execute()
+
+            # Clean up dialogue block reference after execution completes
+            _active_dialogue_blocks.pop(current_block.id, None)
             print(f"Result ({current_block.name}): {current_block.outputs}")
 
             # Store outputs in context for variable substitution (by both ID and name)
@@ -253,6 +274,20 @@ def get_schemas():
     This is a utility endpoint that doesn't require authentication.
     """
     return jsonify(API_SCHEMAS)
+
+@app.route('/api/execution/respond', methods=['POST'])
+def respond_to_dialogue():
+    """Accept user input for a waiting DialogueBlock and unblock its execution."""
+    data = request.get_json()
+    block_id = data.get('block_id')
+    value = data.get('value', '')
+
+    block = _active_dialogue_blocks.get(block_id)
+    if block:
+        block.user_response = value
+        return jsonify({"status": "ok"})
+    return jsonify({"error": "No dialogue block waiting with that ID"}), 404
+
 
 @app.route('/api/execute', methods=['POST'])
 def execute_workflow():
@@ -337,7 +372,13 @@ def execute_workflow():
         if source_id in blocks_map and target_id in blocks_map:
             source_block = blocks_map[source_id]
             target_block = blocks_map[target_id]
-            source_block.connect(source_handle, target_block, target_handle)
+            try:
+                source_block.connect(source_handle, target_block, target_handle)
+                print(f"  ✅ Connected: {source_block.name}.{source_handle} → {target_block.name}.{target_handle}")
+            except ValueError as e:
+                print(f"  ⚠️ Connection skipped: {source_block.name}.{source_handle} → {target_block.name}.{target_handle}: {e}")
+                print(f"     Available inputs on '{target_block.name}': {list(target_block.inputs.keys())}")
+                print(f"     Available outputs on '{source_block.name}': {list(target_block.outputs.keys())}")
 
     def generate():
         try:

@@ -1,0 +1,300 @@
+%% ===========================================================================
+%% PROTOSYNTHESIS — Full Architecture & Interaction Diagram
+%% Visual API Workflow Automation Platform
+%% ===========================================================================
+%%
+%% Layers:
+%%   1. Frontend  — Next.js 16 / React 19 / TypeScript / Zustand / ReactFlow
+%%   2. Backend   — Flask (Python) / Execution Engine / Block Factory / AI
+%%   3. Data      — MongoDB Atlas / Supabase Auth
+%%   4. External  — 23+ third-party API integrations
+%%
+%% Render:  npx -p @mermaid-js/mermaid-cli mmdc -i project_architecture.mmd -o project_architecture.svg
+%% ===========================================================================
+
+graph TD
+
+    %% =====================================================================
+    %% LAYER 1 — FRONTEND
+    %% =====================================================================
+    subgraph FRONTEND["🖥️  FRONTEND — Next.js 16 · React 19 · TypeScript"]
+        direction TB
+
+        %% -- Authentication Pages --
+        subgraph AUTH_PAGES["Authentication Pages"]
+            LOGIN["Login Page<br/><i>app/login/page.tsx</i>"]
+            SIGNUP["Signup Page<br/><i>app/signup/page.tsx</i>"]
+        end
+
+        %% -- Auth Context & Supabase Client --
+        subgraph AUTH_LAYER["Auth Context"]
+            AUTH_CTX["AuthContext<br/><i>contexts/AuthContext.tsx</i><br/>Session management +<br/>JWT token handling"]
+            SUPABASE_LIB["Supabase Client<br/><i>lib/supabase.ts</i>"]
+        end
+
+        %% -- Providers --
+        PROVIDERS["Providers<br/><i>components/Providers.tsx</i><br/>Root context wrapper"]
+
+        %% -- Dashboard --
+        subgraph DASHBOARD["Project Dashboard"]
+            DASH_PAGE["Dashboard Page<br/><i>app/dashboard/page.tsx</i><br/>Project CRUD + Navigation"]
+            NODE_CARD["NodeCard<br/><i>components/NodeCard.tsx</i><br/>Project card display"]
+        end
+
+        %% -- Workflow Editor (Core UI) --
+        subgraph WORKFLOW_EDITOR["Workflow Editor — Core UI"]
+            CANVAS["FlowCanvas<br/><i>components/FlowCanvas.js</i><br/>ReactFlow wrapper +<br/>drag-drop handling"]
+            CUSTOM_NODE["CustomNode<br/><i>components/CustomNode.js</i><br/>Node rendering + ports +<br/>inline settings"]
+            CUSTOM_EDGE["CustomEdge<br/><i>components/CustomEdge.js</i><br/>Animated connection lines"]
+            CONTROL["ControlPanel<br/><i>components/ControlPanel.js</i><br/>Block palette sidebar +<br/>template library"]
+            TOPBAR["TopBar<br/><i>components/TopBar.js</i><br/>Save · Run · Layout ·<br/>Clear actions"]
+            EXEC_LOG["ExecutionLog<br/><i>components/ExecutionLog.js</i><br/>Real-time step-by-step<br/>execution feed"]
+            REACT_IDE["ReactIDE<br/><i>components/ReactIDE.js</i><br/>Monaco code editor<br/>for ReactBlock JSX"]
+            DLG_MODAL["DialogueModal<br/><i>components/DialogueModal.js</i><br/>User-input modal for<br/>DialogueBlock"]
+        end
+
+        %% -- AI Assistant Panel --
+        subgraph ASSISTANT_PANEL["AI Assistant"]
+            CHAT_BTN["ChatButton<br/><i>components/ChatButton.jsx</i><br/>Toggle assistant panel"]
+            AI_PANEL["AIAssistantPanel<br/><i>components/Assistant/<br/>AIAssistantPanel.jsx</i><br/>Gemini conversational UI +<br/>node recommendations"]
+        end
+
+        %% -- State Management --
+        subgraph STATE_MGMT["Global State — Zustand"]
+            STORE["Zustand Store<br/><i>helpers/store.js</i><br/>• Nodes, Edges, Execution<br/>• Auto-save + Validation<br/>• Port visibility + selection<br/>• V2 workflow load/save"]
+        end
+
+        %% -- API Services --
+        subgraph FE_SERVICES["Frontend API Services"]
+            API_CLIENT["API Client<br/><i>services/api.ts</i><br/>Axios instance +<br/>JWT interceptor"]
+            PROJ_SVC["Project Service<br/><i>services/projects.ts</i><br/>Project & Workflow<br/>CRUD helpers"]
+        end
+    end
+
+    %% =====================================================================
+    %% LAYER 2 — BACKEND
+    %% =====================================================================
+    subgraph BACKEND["⚙️  BACKEND — Flask · Python"]
+        direction TB
+
+        %% -- Authentication Middleware --
+        subgraph AUTH_MW["Auth Middleware"]
+            JWT_MW["JWT Middleware<br/><i>auth_middleware.py</i><br/>ES256 / HS256 verification<br/>@require_auth decorator"]
+        end
+
+        %% -- RESTful API Routes --
+        subgraph API_LAYER["RESTful API Routes"]
+            API_V2["API v2 Blueprint<br/><i>api_routes.py</i><br/>Projects · Workflows ·<br/>Block Testing · Execution"]
+            AI_ROUTES["AI Routes<br/><i>ai_routes.py</i><br/>Node recommendations ·<br/>Connection suggestions"]
+            AGENT_ROUTES["Agent Routes<br/><i>routes/agent_routes.py</i><br/>Gemini conversational agent"]
+            SCHEMAS_EP["Schema Endpoint<br/><i>main.py  →  GET /api/schemas</i><br/>23+ integration definitions"]
+            DIALOGUE_EP["Dialogue Endpoint<br/><i>main.py  →  POST /api/dialogue</i><br/>User-input responses"]
+        end
+
+        %% -- Execution Engine --
+        subgraph EXEC_ENGINE["Execution Engine"]
+            RESOLVE_VARS["resolve_variables()<br/><i>main.py</i><br/>Recursive template<br/>variable substitution<br/>({{nodeId.field}})"]
+            EXEC_GRAPH["execute_graph()<br/><i>main.py</i><br/>BFS discovery →<br/>Topological sort →<br/>Sequential execution"]
+            EXEC_WF["execute_workflow()<br/><i>main.py</i><br/>SSE streaming endpoint<br/>wraps execute_graph"]
+        end
+
+        %% -- Block Factory Pattern --
+        subgraph BLOCK_SYSTEM["Block Factory Pattern"]
+            BASE_BLOCK["Block (ABC)<br/><i>blocks.py</i><br/>Abstract base class<br/>run() · to_dict()"]
+            CONNECTOR["Connector<br/><i>blocks.py</i><br/>Data transfer pipe<br/>between blocks"]
+
+            subgraph BLOCK_TYPES["Block Implementations  <i>block_types/</i>"]
+                START_BLK["StartBlock<br/>Entry point"]
+                API_BLK["APIBlock<br/>HTTP requests"]
+                REACT_BLK["ReactBlock<br/>JSX rendering"]
+                TRANSFORM_BLK["TransformBlock<br/>Data manipulation"]
+                LOGIC_BLK["LogicBlock<br/>Arithmetic · Boolean"]
+                STR_BLK["StringBuilderBlock<br/>Template engine"]
+                WAIT_BLK["WaitBlock<br/>Delay execution"]
+                DLG_BLK["DialogueBlock<br/>User prompts"]
+                KEY_BLK["ApiKeyBlock<br/>Credential store"]
+                GET_KEY_BLK["GetKeyBlock<br/>Credential retrieval"]
+                LOOP_BLK["LoopBlock<br/>Iteration support"]
+            end
+        end
+
+        %% -- Data Models & CRUD --
+        subgraph DATA_MODEL["Data Models & CRUD"]
+            PROJECT_MODEL["Project<br/><i>project.py</i><br/>Project/Workflow<br/>data structures"]
+            USER_SVC["UserService<br/><i>user_service.py</i><br/>User-scoped CRUD<br/>Projects → Workflows"]
+            API_SCHEMAS_FILE["API Schemas<br/><i>api_schemas.py</i><br/>23+ integration<br/>definitions"]
+        end
+
+        %% -- Database Singleton --
+        subgraph DB_LAYER["Database Access"]
+            DB_SINGLETON["MongoDB Singleton<br/><i>database.py</i><br/>Connection pooling +<br/>Index management"]
+        end
+
+        %% -- AI / ML Services --
+        subgraph AI_SERVICES["AI & ML Services"]
+            AI_SVC["AI Service<br/><i>services/integrations/<br/>ai_service.py</i><br/>Node recommendation<br/>engine"]
+            MOORCHEH["Moorcheh Client<br/><i>services/integrations/<br/>moorcheh_client.py</i><br/>RAG search + answers"]
+            MOORCHEH_INGEST["Moorcheh Ingestion<br/><i>services/integrations/<br/>moorcheh_ingestion_service.py</i><br/>Knowledge-base upload"]
+            GEMINI["Gemini Client<br/><i>services/integrations/<br/>gemini_client.py</i><br/>LLM API wrapper"]
+            GEMINI_AGENT["Gemini Agent Service<br/><i>services/integrations/<br/>gemini_agent_service.py</i><br/>Multi-turn agent logic"]
+        end
+
+        %% -- Utilities --
+        subgraph UTILS["Utilities"]
+            SEC_LOG["Secure Logger<br/><i>utils/secure_logger.py</i><br/>Credential-safe logging"]
+        end
+    end
+
+    %% =====================================================================
+    %% LAYER 3 — DATA & EXTERNAL SERVICES
+    %% =====================================================================
+    subgraph DATA_LAYER["🗄️  DATA & EXTERNAL SERVICES"]
+        direction TB
+
+        MONGODB[("MongoDB Atlas<br/>Users collection<br/>Projects + Workflows<br/>(nested documents)")]
+        SUPABASE_AUTH[("Supabase Auth<br/>User registration<br/>JWT token issuance")]
+
+        subgraph EXTERNAL_AI["AI APIs"]
+            MOORCHEH_API["Moorcheh AI API<br/>Namespace search · RAG"]
+            GEMINI_API["Google Gemini API<br/>Conversational AI"]
+        end
+
+        subgraph EXTERNAL_INTEGRATIONS["23+ Integration APIs"]
+            PAY_APIS["Payments<br/>Stripe · PayPal"]
+            COMM_APIS["Communication<br/>Slack · Discord · Twilio<br/>Telegram Bot"]
+            LLM_APIS["AI / ML<br/>OpenAI · Claude · Gemini<br/>Hugging Face · Stability AI<br/>ElevenLabs"]
+            DATA_APIS["Data / Storage<br/>MongoDB Atlas · Airtable<br/>Google Sheets · Notion"]
+            UTIL_APIS["Utilities<br/>Google Maps · Google Calendar<br/>Todoist · Custom HTTP"]
+        end
+
+        KNOWLEDGE_BASE["Knowledge Base<br/><i>backend/knowledge-base/</i><br/>Static docs for RAG"]
+    end
+
+    %% =====================================================================
+    %% CONNECTIONS — Auth Flow
+    %% =====================================================================
+    LOGIN --> AUTH_CTX
+    SIGNUP --> AUTH_CTX
+    AUTH_CTX --> SUPABASE_LIB
+    SUPABASE_LIB -->|"Auth requests"| SUPABASE_AUTH
+    AUTH_CTX --> PROVIDERS
+
+    %% =====================================================================
+    %% CONNECTIONS — Frontend Component → State
+    %% =====================================================================
+    CANVAS --> STORE
+    CUSTOM_NODE --> STORE
+    CONTROL --> STORE
+    TOPBAR --> STORE
+    EXEC_LOG --> STORE
+    REACT_IDE --> STORE
+    DLG_MODAL --> STORE
+    AI_PANEL --> STORE
+    CHAT_BTN --> AI_PANEL
+    DASH_PAGE --> PROJ_SVC
+    NODE_CARD --> DASH_PAGE
+
+    %% =====================================================================
+    %% CONNECTIONS — Frontend → Backend  (HTTP + JWT)
+    %% =====================================================================
+    STORE -->|"HTTP + JWT"| API_CLIENT
+    API_CLIENT -->|"REST calls"| JWT_MW
+    PROJ_SVC --> API_CLIENT
+
+    %% =====================================================================
+    %% CONNECTIONS — Auth Middleware → Routes
+    %% =====================================================================
+    JWT_MW --> API_V2
+    JWT_MW --> AI_ROUTES
+    JWT_MW --> AGENT_ROUTES
+
+    %% =====================================================================
+    %% CONNECTIONS — API Routes → Backend Services
+    %% =====================================================================
+    API_V2 -->|"CRUD"| USER_SVC
+    API_V2 -->|"Execute"| EXEC_WF
+    API_V2 -->|"Test block"| API_BLK
+    AI_ROUTES --> AI_SVC
+    AGENT_ROUTES --> GEMINI_AGENT
+    GEMINI_AGENT --> GEMINI
+    SCHEMAS_EP --> API_SCHEMAS_FILE
+    DIALOGUE_EP --> DLG_BLK
+
+    %% =====================================================================
+    %% CONNECTIONS — Execution Engine internals
+    %% =====================================================================
+    EXEC_WF --> EXEC_GRAPH
+    RESOLVE_VARS -->|"Inject upstream outputs"| EXEC_GRAPH
+    EXEC_GRAPH -->|"1. BFS discover"| BASE_BLOCK
+    EXEC_GRAPH -->|"2. Topo sort"| CONNECTOR
+    EXEC_GRAPH -->|"3. Execute blocks"| BLOCK_TYPES
+
+    %% =====================================================================
+    %% CONNECTIONS — Block Hierarchy (inheritance)
+    %% =====================================================================
+    BASE_BLOCK -.->|"extends"| START_BLK
+    BASE_BLOCK -.->|"extends"| API_BLK
+    BASE_BLOCK -.->|"extends"| REACT_BLK
+    BASE_BLOCK -.->|"extends"| TRANSFORM_BLK
+    BASE_BLOCK -.->|"extends"| LOGIC_BLK
+    BASE_BLOCK -.->|"extends"| STR_BLK
+    BASE_BLOCK -.->|"extends"| WAIT_BLK
+    BASE_BLOCK -.->|"extends"| DLG_BLK
+    BASE_BLOCK -.->|"extends"| KEY_BLK
+    BASE_BLOCK -.->|"extends"| GET_KEY_BLK
+    BASE_BLOCK -.->|"extends"| LOOP_BLK
+
+    %% =====================================================================
+    %% CONNECTIONS — Data Layer
+    %% =====================================================================
+    USER_SVC --> DB_SINGLETON
+    DB_SINGLETON -->|"pymongo"| MONGODB
+    JWT_MW -->|"Verify JWT"| SUPABASE_AUTH
+
+    %% =====================================================================
+    %% CONNECTIONS — AI Services → External
+    %% =====================================================================
+    AI_SVC --> MOORCHEH
+    MOORCHEH --> MOORCHEH_API
+    MOORCHEH_INGEST --> MOORCHEH_API
+    MOORCHEH_INGEST --> KNOWLEDGE_BASE
+    GEMINI --> GEMINI_API
+
+    %% =====================================================================
+    %% CONNECTIONS — Block → External APIs
+    %% =====================================================================
+    API_BLK -->|"HTTP requests"| PAY_APIS
+    API_BLK -->|"HTTP requests"| COMM_APIS
+    API_BLK -->|"HTTP requests"| LLM_APIS
+    API_BLK -->|"HTTP requests"| DATA_APIS
+    API_BLK -->|"HTTP requests"| UTIL_APIS
+
+    %% =====================================================================
+    %% CONNECTIONS — Streaming (SSE) back to Frontend
+    %% =====================================================================
+    EXEC_WF -->|"SSE stream<br/>(execution events)"| API_CLIENT
+
+    %% =====================================================================
+    %% CONNECTIONS — DialogueBlock round-trip
+    %% =====================================================================
+    DLG_BLK -->|"prompt"| DLG_MODAL
+    DLG_MODAL -->|"user response"| DIALOGUE_EP
+
+    %% =====================================================================
+    %% STYLING
+    %% =====================================================================
+    classDef fe          fill:#1a1a2e,stroke:#16213e,color:#e0e0ff
+    classDef be          fill:#0f3460,stroke:#1a1a2e,color:#e0e0ff
+    classDef data        fill:#533483,stroke:#1a1a2e,color:#e0e0ff
+    classDef block       fill:#e94560,stroke:#1a1a2e,color:#fff
+    classDef engine      fill:#0d7377,stroke:#1a1a2e,color:#fff
+    classDef ai          fill:#6a0572,stroke:#1a1a2e,color:#e0e0ff
+    classDef external    fill:#3d2c8d,stroke:#1a1a2e,color:#e0e0ff
+
+    class LOGIN,SIGNUP,AUTH_CTX,SUPABASE_LIB,PROVIDERS,DASH_PAGE,NODE_CARD,CANVAS,CUSTOM_NODE,CUSTOM_EDGE,CONTROL,TOPBAR,EXEC_LOG,REACT_IDE,DLG_MODAL,CHAT_BTN,AI_PANEL,STORE,API_CLIENT,PROJ_SVC fe
+    class JWT_MW,API_V2,AI_ROUTES,AGENT_ROUTES,SCHEMAS_EP,DIALOGUE_EP,PROJECT_MODEL,USER_SVC,API_SCHEMAS_FILE,DB_SINGLETON,SEC_LOG be
+    class MONGODB,SUPABASE_AUTH,KNOWLEDGE_BASE data
+    class START_BLK,API_BLK,REACT_BLK,TRANSFORM_BLK,LOGIC_BLK,STR_BLK,WAIT_BLK,DLG_BLK,KEY_BLK,GET_KEY_BLK,LOOP_BLK block
+    class RESOLVE_VARS,EXEC_GRAPH,EXEC_WF,BASE_BLOCK,CONNECTOR engine
+    class AI_SVC,MOORCHEH,MOORCHEH_INGEST,GEMINI,GEMINI_AGENT ai
+    class MOORCHEH_API,GEMINI_API,PAY_APIS,COMM_APIS,LLM_APIS,DATA_APIS,UTIL_APIS,EXTERNAL_INTEGRATIONS external
