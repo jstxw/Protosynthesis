@@ -277,17 +277,27 @@ class APIBlock(Block):
             self.outputs['status_code'] = response.status_code
             response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
 
-            response_data = response.json()
-            self.outputs['response_json'] = response_data
+            # Try to parse as JSON, fall back to raw text for APIs like Slack that return plain text
+            try:
+                response_data = response.json()
+                self.outputs['response_json'] = response_data
 
-            # Map response data to dynamic outputs
-            schema_outputs = schema.get("outputs", {})
-            for key, meta in schema_outputs.items():
-                path = meta.get("path")
-                if path:
-                    self.outputs[key] = _get_nested_value(response_data, path)
-                elif key in response_data:
-                    self.outputs[key] = response_data[key]
+                # Map response data to dynamic outputs
+                schema_outputs = schema.get("outputs", {})
+                for key, meta in schema_outputs.items():
+                    path = meta.get("path")
+                    if path:
+                        self.outputs[key] = _get_nested_value(response_data, path)
+                    elif key in response_data:
+                        self.outputs[key] = response_data[key]
+            except (json.JSONDecodeError, ValueError):
+                # Non-JSON response (e.g., Slack returns plain text "ok")
+                raw_text = response.text
+                self.outputs['response_json'] = {"raw_response": raw_text}
+                # Map to status output if it exists
+                schema_outputs = schema.get("outputs", {})
+                if "status" in schema_outputs:
+                    self.outputs['status'] = raw_text
 
         except requests.exceptions.RequestException as e:
             error_msg = f"Network request failed: {e}"

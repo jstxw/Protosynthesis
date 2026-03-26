@@ -62,6 +62,10 @@ app.register_blueprint(ai_bp)
 from routes.agent_routes import agent_bp
 app.register_blueprint(agent_bp)
 
+# Register Google OAuth routes
+from routes.google_oauth import google_oauth_bp
+app.register_blueprint(google_oauth_bp)
+
 # Initialize MongoDB connection
 try:
     mongodb.connect()
@@ -420,7 +424,7 @@ if __name__ == '__main__':
     # Configuration from environment variables
     debug_mode = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
     port = int(os.getenv('PORT', 5001))
-    host = os.getenv('HOST', '127.0.0.1')  # Changed from 0.0.0.0 to localhost for security
+    host = os.getenv('HOST', '0.0.0.0')  # 0.0.0.0 needed for container/production environments
 
     print(f"Starting Flask app on {host}:{port} (debug={debug_mode})")
     app.run(debug=debug_mode, host=host, port=port)

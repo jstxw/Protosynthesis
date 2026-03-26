@@ -35,3 +35,6 @@ pymongo==4.6.1
 PyJWT==2.8.0
 python-dotenv==1.0.0
 google-generativeai==0.3.2
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+gunicorn==22.0.0

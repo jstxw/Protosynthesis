@@ -88,12 +88,12 @@ const initializeBlockData = (type, params = {}) => {
                 ...baseBlock,
                 jsx_code: params.jsx_code || 'export default function Component() { return <div>Hello</div>; }',
                 css_code: params.css_code || '',
-                inputs: {},
-                outputs: {},
-                input_meta: {},
-                output_meta: {},
-                visible_inputs: [],
-                visible_outputs: [],
+                inputs: { title: 'Interactive Form' },
+                outputs: { onTextEntered: null },
+                input_meta: { title: { type: 'string' } },
+                output_meta: { onTextEntered: { type: 'any' } },
+                visible_inputs: ['title'],
+                visible_outputs: ['onTextEntered'],
             };
         case 'STRING_BUILDER':
             return {
@@ -392,6 +392,11 @@ export const useStore = create((set, get) => ({
             console.log("Adding block locally:", normalizedNode);
             set(state => ({ nodes: [...state.nodes, normalizedNode] }));
             get().selectNode(normalizedNode.id);
+
+            // Auto-open the React IDE when adding a REACT block
+            if (type === 'REACT') {
+                get().openReactIDE();
+            }
 
             // Auto-save if in V2 mode
             if (currentProjectId && currentWorkflowId) {
@@ -1272,10 +1277,10 @@ export const useStore = create((set, get) => ({
             console.log('✅ Workflow loaded successfully:', { nodes: flowNodes.length, edges: flowEdges.length });
             console.log('Current store nodes after load:', get().nodes);
 
-            // Auto-select React node if present
+            // Auto-select React node and open IDE if present
             const reactNode = flowNodes.find(n => n.data && (n.data.type === 'REACT' || n.data.block_type === 'REACT'));
             if (reactNode) {
-                set({ selectedNodeId: reactNode.id });
+                set({ selectedNodeId: reactNode.id, reactIDEOpen: true });
             }
         } catch (error) {
             console.error("Failed to load workflow:", error);

@@ -1,6 +1,6 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
-import Editor, {useMonaco} from '@monaco-editor/react';
-import {useStore} from '../helpers/store';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Editor, { useMonaco } from '@monaco-editor/react';
+import { useStore } from '../helpers/store';
 
 const ReactIDE = () => {
     const nodes = useStore((state) => state.nodes);
@@ -99,14 +99,14 @@ const ReactIDE = () => {
     const handleJsxChange = (value) => {
         setJsx(value);
         if (reactNodeId) {
-            updateNode(reactNodeId, {jsx_code: value});
+            updateNode(reactNodeId, { jsx_code: value });
         }
     };
 
     const handleCssChange = (value) => {
         setCss(value);
         if (reactNodeId) {
-            updateNode(reactNodeId, {css_code: value});
+            updateNode(reactNodeId, { css_code: value });
         }
     };
 
@@ -134,7 +134,7 @@ const ReactIDE = () => {
         if (match && match[1]) {
             // First, remove all comments (line and block) from the captured group
             const propsString = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
-            
+
             // Extract prop names from the cleaned string
             const props = propsString
                 .split(',')
@@ -149,9 +149,9 @@ const ReactIDE = () => {
 
                 // Convention: Props starting with 'on' followed by uppercase are Outputs (Events)
                 if (prop.startsWith('on') && prop.length > 2 && prop[2] === prop[2].toUpperCase()) {
-                    newOutputs.push({key: prop, data_type: 'any'});
+                    newOutputs.push({ key: prop, data_type: 'any' });
                 } else {
-                    newInputs.push({key: prop, data_type: 'any'});
+                    newInputs.push({ key: prop, data_type: 'any' });
                 }
             });
 
@@ -175,7 +175,7 @@ const ReactIDE = () => {
             const outputsChanged = JSON.stringify(newOutputs.map(o => o.key).sort()) !== JSON.stringify(currentOutputs.map(o => o.key).sort());
 
             if (inputsChanged || outputsChanged) {
-                updateNode(selectedNode.id, {inputs: newInputs, outputs: newOutputs});
+                updateNode(selectedNode.id, { inputs: newInputs, outputs: newOutputs });
             }
         }
     }, [updateNode]);
@@ -218,7 +218,7 @@ const ReactIDE = () => {
         const handleMessage = (event) => {
             if (!reactNodeId) return;
 
-            const {type, payload} = event.data;
+            const { type, payload } = event.data;
             if (type === 'SET_WORKFLOW_OUTPUT') {
                 updateOutputValue(reactNodeId, payload.key, payload.value);
             } else if (type === 'TRIGGER_WORKFLOW_EXECUTION') {
@@ -245,72 +245,72 @@ const ReactIDE = () => {
             <div className="react-ide-modal">
                 <div className="ide-header">
                     <div className="ide-tabs">
+                        <button
+                            className={`ide-tab ${activeTab === 'jsx' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('jsx')}
+                        >
+                            JSX
+                        </button>
+                        <button
+                            className={`ide-tab ${activeTab === 'css' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('css')}
+                        >
+                            CSS
+                        </button>
+                    </div>
+                    <div className="ide-node-name">{reactNode?.data?.name || 'React I/O'}</div>
                     <button
-                        className={`ide-tab ${activeTab === 'jsx' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('jsx')}
+                        className="ide-close-btn"
+                        onClick={closeReactIDE}
+                        title="Close"
                     >
-                        JSX
-                    </button>
-                    <button
-                        className={`ide-tab ${activeTab === 'css' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('css')}
-                    >
-                        CSS
+                        ✕
                     </button>
                 </div>
-                <div className="ide-node-name">{reactNode?.data?.name || 'React I/O'}</div>
-                <button
-                    className="ide-close-btn"
-                    onClick={closeReactIDE}
-                    title="Close"
-                >
-                    ✕
-                </button>
-            </div>
 
-            <div className="ide-editor-container">
-                {activeTab === 'jsx' && (
-                    <Editor
-                        height="100%"
-                        defaultLanguage="javascript"
-                        theme="flow-theme"
-                        value={jsx}
-                        onChange={handleJsxChange}
-                        options={{
-                            minimap: {enabled: false},
-                            fontSize: 12,
-                            padding: {top: 10}
-                        }}
-                    />
-                )}
-                {activeTab === 'css' && (
-                    <Editor
-                        height="100%"
-                        defaultLanguage="css"
-                        theme="flow-theme"
-                        value={css}
-                        onChange={handleCssChange}
-                        options={{
-                            minimap: {enabled: false},
-                            fontSize: 12,
-                            padding: {top: 10}
-                        }}
-                    />
-                )}
-            </div>
-
-            <div className="ide-preview-container">
-                <div className="preview-label">Live Preview</div>
-                <div className="preview-wrapper">
-                    <iframe
-                        ref={iframeRef}
-                        src="/sandbox.html"
-                        title="React Component Preview"
-                        sandbox="allow-scripts allow-same-origin"
-                        className="preview-iframe"
-                    />
+                <div className="ide-editor-container">
+                    {activeTab === 'jsx' && (
+                        <Editor
+                            height="100%"
+                            defaultLanguage="javascript"
+                            theme="flow-theme"
+                            value={jsx}
+                            onChange={handleJsxChange}
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 12,
+                                padding: { top: 10 }
+                            }}
+                        />
+                    )}
+                    {activeTab === 'css' && (
+                        <Editor
+                            height="100%"
+                            defaultLanguage="css"
+                            theme="flow-theme"
+                            value={css}
+                            onChange={handleCssChange}
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 12,
+                                padding: { top: 10 }
+                            }}
+                        />
+                    )}
                 </div>
-            </div>
+
+                <div className="ide-preview-container">
+                    <div className="preview-label">Live Preview</div>
+                    <div className="preview-wrapper">
+                        <iframe
+                            ref={iframeRef}
+                            src="/sandbox.html"
+                            title="React Component Preview"
+                            sandbox="allow-scripts allow-same-origin"
+                            className="preview-iframe"
+                        />
+                    </div>
+                </div>
             </div>
         </>
     );

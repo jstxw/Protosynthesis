@@ -662,7 +662,7 @@ API_SCHEMAS = {
     # ============================================
     "slack_webhook": {
         "name": "Slack Webhook",
-        "url": "https://hooks.slack.com/services/{T00000000}/{B00000000}/{XXXXXXXXXXXXXXXXXXXX}",
+        "url": "{webhook_path}",
         "method": "POST",
         "doc_url": "https://api.slack.com/messaging/webhooks",
         "description": "Send messages to Slack channels",
@@ -673,10 +673,10 @@ API_SCHEMAS = {
             "path": {
                 "webhook_path": {
                     "type": "string",
-                    "default": "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX",
+                    "default": "https://hooks.slack.com/services/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",
                     "required": True,
-                    "placeholder": "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX",
-                    "description": "Slack webhook URL path"
+                    "placeholder": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX",
+                    "description": "Full Slack webhook URL"
                 }
             },
             "body": {
@@ -1061,14 +1061,6 @@ API_SCHEMAS = {
                     "description": "Calendar ID (use 'primary' for main calendar)"
                 }
             },
-            "params": {
-                "key": {
-                    "type": "string",
-                    "default": "YOUR_API_KEY",
-                    "placeholder": "AIza...",
-                    "description": "Google Cloud API key (optional with OAuth)"
-                }
-            },
             "headers": {
                 "Authorization": {
                     "type": "string",
@@ -1088,16 +1080,16 @@ API_SCHEMAS = {
                 },
                 "start": {
                     "type": "json",
-                    "default": {"dateTime": "2026-01-15T10:00:00-07:00"},
+                    "default": {"dateTime": "2026-02-27T10:00:00-05:00"},
                     "required": True,
-                    "placeholder": '{"dateTime": "2026-01-15T10:00:00-07:00"}',
+                    "placeholder": '{"dateTime": "2026-02-27T10:00:00-05:00"}',
                     "description": "Event start time object"
                 },
                 "end": {
                     "type": "json",
-                    "default": {"dateTime": "2026-01-15T11:00:00-07:00"},
+                    "default": {"dateTime": "2026-02-27T11:00:00-05:00"},
                     "required": True,
-                    "placeholder": '{"dateTime": "2026-01-15T11:00:00-07:00"}',
+                    "placeholder": '{"dateTime": "2026-02-27T11:00:00-05:00"}',
                     "description": "Event end time object"
                 }
             }

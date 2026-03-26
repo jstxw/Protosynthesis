@@ -18,11 +18,42 @@
   animation: popIn 0.3s ease-out;
 }
 
+.floating-react-ide-button {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #61dafb, #2196f3);
+  border: 2px solid rgba(97, 218, 251, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+  z-index: 999;
+  color: #1e1e1e;
+  animation: popIn 0.3s ease-out;
+}
+
+.floating-react-ide-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(33, 150, 243, 0.5);
+  border-color: rgba(97, 218, 251, 0.8);
+}
+
+.floating-react-ide-button:active {
+  transform: scale(0.95);
+}
+
 @keyframes popIn {
   from {
     opacity: 0;
     transform: scale(0.5);
   }
+
   to {
     opacity: 1;
     transform: scale(1);

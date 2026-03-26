@@ -11,6 +11,7 @@ import AIAssistantPanel from '@/components/Assistant/AIAssistantPanel';
 import ReactIDE from '@/components/ReactIDE'; // Import new ReactIDE
 import DialogueModal from '@/components/DialogueModal';
 import ChatButton from '@/components/ChatButton';
+import ReactIDEButton from '@/components/ReactIDEButton';
 import { useStore } from '@/helpers/store';
 
 // Dynamically import client-only components to prevent SSR hydration errors.
@@ -109,7 +110,8 @@ export default function WorkflowPage() {
           edges={edges}
         />
 
-        {/* Floating chat button */}
+        {/* Floating buttons */}
+        <ReactIDEButton />
         <ChatButton />
 
         {/* Loading Screen Overlay */}
