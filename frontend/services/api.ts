@@ -98,7 +98,7 @@ apiClient.interceptors.response.use(
       // Return a standardized error
       const apiError: ApiError = {
         code: data?.code || `HTTP_${status}`,
-        message: data?.message || data?.error || error.message || 'An error occurred',
+        message: data?.message || (data as any)?.error || error.message || 'An error occurred',
         details: data?.details,
       };
 

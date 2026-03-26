@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ReactFlowProvider } from 'reactflow';
@@ -20,6 +20,18 @@ import { useStore } from '@/helpers/store';
 const FlowCanvas = dynamic(() => import('@/components/FlowCanvas'), { ssr: false });
 
 export default function WorkflowPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <WorkflowPageContent />
+    </Suspense>
+  );
+}
+
+function WorkflowPageContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
